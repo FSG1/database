@@ -6,7 +6,8 @@ ENV POSTGRES_USER fmms
 ENV POSTGRES_PASSWORD test123456
 
 RUN mkdir -p /docker-entrypoint-initdb.d
-COPY schemas/20170925.sql /docker-entrypoint-initdb.d
+COPY before.sql /docker-entrypoint-initdb.d/0-before.sql
+COPY schemas/latest.sql /docker-entrypoint-initdb.d/99-latest.sql
 
 EXPOSE 5432
 
