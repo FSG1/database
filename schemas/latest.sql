@@ -1314,6 +1314,24 @@ ALTER SEQUENCE profile_qualification_id_seq OWNED BY profile_qualification.id;
 
 
 --
+-- Name: qualification_description; Type: VIEW; Schema: study; Owner: fmms
+--
+
+CREATE VIEW qualification_description AS
+ SELECT q.id AS q_id,
+    al.name AS al_name,
+    a.name AS a_name,
+    l.level
+   FROM qualification q,
+    architecturallayer al,
+    activity a,
+    levelofskill l
+  WHERE ((q.architecturallayer_id = al.id) AND (q.activity_id = a.id) AND (q.levelofskill_id = l.id));
+
+
+ALTER TABLE qualification_description OWNER TO fmms;
+
+--
 -- Name: qualification_id_seq; Type: SEQUENCE; Schema: study; Owner: postgres
 --
 
@@ -1333,6 +1351,56 @@ ALTER TABLE qualification_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE qualification_id_seq OWNED BY qualification.id;
 
+
+--
+-- Name: qualification_match_learning_goals; Type: VIEW; Schema: study; Owner: fmms
+--
+
+CREATE VIEW qualification_match_learning_goals AS
+ SELECT q.id AS q_id,
+    al.name AS al_name,
+    a.name AS a_name,
+    l.level,
+    lg.description,
+    m.code
+   FROM qualification q,
+    architecturallayer al,
+    activity a,
+    levelofskill l,
+    learninggoal lg,
+    module m,
+    learninggoal_qualification lgq
+  WHERE ((lg.id = lgq.learninggoal_id) AND (lgq.qualification_id = q.id) AND (q.architecturallayer_id = al.id) AND (q.activity_id = a.id) AND (q.levelofskill_id = l.id) AND (lg.module_id = m.id))
+  GROUP BY q.id, al.id, al.name, a.id, a.name, l.level, lg.description, m.code
+  ORDER BY al.id, a.id, l.level, lg.description, m.code;
+
+
+ALTER TABLE qualification_match_learning_goals OWNER TO fmms;
+
+--
+-- Name: qualification_match_modules; Type: VIEW; Schema: study; Owner: fmms
+--
+
+CREATE VIEW qualification_match_modules AS
+ SELECT q.id AS q_id,
+    al.name AS al_name,
+    a.name AS a_name,
+    l.level,
+    m.code AS module_code,
+    m.name AS module_name
+   FROM qualification q,
+    architecturallayer al,
+    activity a,
+    levelofskill l,
+    learninggoal lg,
+    learninggoal_qualification lgq,
+    module m
+  WHERE ((m.id = lg.module_id) AND (lg.id = lgq.learninggoal_id) AND (lgq.qualification_id = q.id) AND (q.architecturallayer_id = al.id) AND (q.activity_id = a.id) AND (q.levelofskill_id = l.id))
+  GROUP BY q.id, al.id, al.name, a.id, a.name, l.level, m.code, m.name
+  ORDER BY al.id, a.id, l.level, m.code;
+
+
+ALTER TABLE qualification_match_modules OWNER TO fmms;
 
 --
 -- Name: qualifications_after_semester; Type: VIEW; Schema: study; Owner: fmms
@@ -1390,6 +1458,41 @@ CREATE VIEW qualifications_after_semester AS
 
 
 ALTER TABLE qualifications_after_semester OWNER TO fmms;
+
+--
+-- Name: qualifications_learning_goals; Type: VIEW; Schema: study; Owner: fmms
+--
+
+CREATE VIEW qualifications_learning_goals AS
+ SELECT qd.q_id,
+    qd.al_name,
+    qd.a_name,
+    qd.level,
+    qml.description,
+    qml.code
+   FROM (qualification_description qd
+     LEFT JOIN qualification_match_learning_goals qml ON ((qd.q_id = qml.q_id)))
+  ORDER BY qd.q_id, qd.al_name, qd.a_name, qd.level, qml.description, qml.code;
+
+
+ALTER TABLE qualifications_learning_goals OWNER TO fmms;
+
+--
+-- Name: qualifications_modules; Type: VIEW; Schema: study; Owner: fmms
+--
+
+CREATE VIEW qualifications_modules AS
+ SELECT qd.q_id,
+    qd.al_name,
+    qd.a_name,
+    qd.level,
+    qmm.module_code
+   FROM (qualification_description qd
+     LEFT JOIN qualification_match_modules qmm ON ((qd.q_id = qmm.q_id)))
+  ORDER BY qd.q_id, qd.al_name, qd.a_name, qd.level, qmm.module_code;
+
+
+ALTER TABLE qualifications_modules OWNER TO fmms;
 
 --
 -- Name: study_programme_id_seq; Type: SEQUENCE; Schema: study; Owner: postgres
