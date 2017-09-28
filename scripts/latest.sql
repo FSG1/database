@@ -607,27 +607,6 @@ CREATE TABLE curriculum (
 ALTER TABLE curriculum OWNER TO postgres;
 
 --
--- Name: curriculum_id_seq; Type: SEQUENCE; Schema: study; Owner: postgres
---
-
-CREATE SEQUENCE curriculum_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE curriculum_id_seq OWNER TO postgres;
-
---
--- Name: curriculum_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: postgres
---
-
-ALTER SEQUENCE curriculum_id_seq OWNED BY curriculum.id;
-
-
---
 -- Name: module; Type: TABLE; Schema: study; Owner: postgres
 --
 
@@ -710,6 +689,168 @@ CREATE VIEW curriculum_overview AS
 
 
 ALTER TABLE curriculum_overview OWNER TO fmms;
+
+--
+-- Name: curriculum_differentiation; Type: VIEW; Schema: study; Owner: fmms
+--
+
+CREATE VIEW curriculum_differentiation AS
+( SELECT curriculum_overview.name,
+    curriculum_overview.semester,
+    curriculum_overview.module_code,
+    curriculum_overview.module_name,
+    'SEBI'::text AS differentiation
+   FROM curriculum_overview
+  GROUP BY curriculum_overview.name, curriculum_overview.semester, curriculum_overview.module_code, curriculum_overview.module_name
+ HAVING (count(*) = 2)
+  ORDER BY (count(*)))
+UNION
+ SELECT curriculum_overview.name,
+    curriculum_overview.semester,
+    curriculum_overview.module_code,
+    curriculum_overview.module_name,
+    'SE'::text AS differentiation
+   FROM curriculum_overview
+  GROUP BY curriculum_overview.name, curriculum_overview.semester, curriculum_overview.module_code, curriculum_overview.module_name
+ HAVING ((count(*) = 1) AND ((curriculum_overview.module_code)::text IN ( SELECT cn.module_code
+           FROM curriculum_overview cn
+          WHERE (((cn.name)::text = (cn.name)::text) AND ((cn.study_programme)::text = 'SE'::text)))))
+UNION
+ SELECT curriculum_overview.name,
+    curriculum_overview.semester,
+    curriculum_overview.module_code,
+    curriculum_overview.module_name,
+    'BI'::text AS differentiation
+   FROM curriculum_overview
+  GROUP BY curriculum_overview.name, curriculum_overview.semester, curriculum_overview.module_code, curriculum_overview.module_name
+ HAVING ((count(*) = 1) AND ((curriculum_overview.module_code)::text IN ( SELECT cn.module_code
+           FROM curriculum_overview cn
+          WHERE (((cn.name)::text = (cn.name)::text) AND ((cn.study_programme)::text = 'BI'::text)))))
+  ORDER BY 2, 5, 3;
+
+
+ALTER TABLE curriculum_differentiation OWNER TO fmms;
+
+--
+-- Name: learninggoal; Type: TABLE; Schema: study; Owner: postgres
+--
+
+CREATE TABLE learninggoal (
+    id integer NOT NULL,
+    module_id integer NOT NULL,
+    description text,
+    sequenceno smallint DEFAULT 1 NOT NULL,
+    weight numeric(3,2) DEFAULT NULL::numeric,
+    grading_id integer,
+    CONSTRAINT learninggoal_sequence_checl CHECK ((sequenceno > 0)),
+    CONSTRAINT learninggoal_weight_check CHECK (((weight >= 0.0) AND (weight <= 1.0))),
+    CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL))
+);
+
+
+ALTER TABLE learninggoal OWNER TO postgres;
+
+--
+-- Name: learninggoal_qualification; Type: TABLE; Schema: study; Owner: postgres
+--
+
+CREATE TABLE learninggoal_qualification (
+    id integer NOT NULL,
+    learninggoal_id integer,
+    qualification_id integer
+);
+
+
+ALTER TABLE learninggoal_qualification OWNER TO postgres;
+
+--
+-- Name: levelofskill; Type: TABLE; Schema: study; Owner: postgres
+--
+
+CREATE TABLE levelofskill (
+    id integer NOT NULL,
+    level smallint NOT NULL,
+    autonomy text,
+    behaviour text,
+    context text,
+    CONSTRAINT levelofskill_level_check CHECK (((level > 0) AND (level <= 5)))
+);
+
+
+ALTER TABLE levelofskill OWNER TO postgres;
+
+--
+-- Name: qualification; Type: TABLE; Schema: study; Owner: postgres
+--
+
+CREATE TABLE qualification (
+    id integer NOT NULL,
+    architecturallayer_id integer,
+    activity_id integer,
+    levelofskill_id integer
+);
+
+
+ALTER TABLE qualification OWNER TO postgres;
+
+--
+-- Name: TABLE qualification; Type: COMMENT; Schema: study; Owner: postgres
+--
+
+COMMENT ON TABLE qualification IS 'Contains all possible combinations of architectural layer, activity and level of skill';
+
+
+--
+-- Name: clots_self_evaluation; Type: VIEW; Schema: study; Owner: fmms
+--
+
+CREATE VIEW clots_self_evaluation AS
+ SELECT co.name,
+    co.study_programme,
+    a.name AS activity,
+    al.name AS architecturallayer,
+    l.level,
+    lg.description,
+    m.code,
+    m.credits,
+    co.semester,
+    cd.differentiation
+   FROM qualification q,
+    architecturallayer al,
+    activity a,
+    levelofskill l,
+    learninggoal lg,
+    module m,
+    learninggoal_qualification lgq,
+    curriculum_overview co,
+    curriculum_differentiation cd
+  WHERE ((lg.id = lgq.learninggoal_id) AND (lgq.qualification_id = q.id) AND (q.architecturallayer_id = al.id) AND (q.activity_id = a.id) AND (q.levelofskill_id = l.id) AND (lg.module_id = m.id) AND ((m.code)::text = (co.module_code)::text) AND ((m.code)::text = (cd.module_code)::text))
+  GROUP BY co.name, co.study_programme, al.name, al.id, a.id, a.name, l.level, lg.description, m.code, m.credits, co.semester, cd.differentiation
+  ORDER BY co.name, co.study_programme, a.id, al.id, l.level, co.semester, m.code, lg.description, m.credits;
+
+
+ALTER TABLE clots_self_evaluation OWNER TO fmms;
+
+--
+-- Name: curriculum_id_seq; Type: SEQUENCE; Schema: study; Owner: postgres
+--
+
+CREATE SEQUENCE curriculum_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE curriculum_id_seq OWNER TO postgres;
+
+--
+-- Name: curriculum_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: postgres
+--
+
+ALTER SEQUENCE curriculum_id_seq OWNED BY curriculum.id;
+
 
 --
 -- Name: department; Type: TABLE; Schema: study; Owner: fmms
@@ -851,22 +992,6 @@ ALTER SEQUENCE grading_id_seq OWNED BY grading.id;
 
 
 --
--- Name: levelofskill; Type: TABLE; Schema: study; Owner: postgres
---
-
-CREATE TABLE levelofskill (
-    id integer NOT NULL,
-    level smallint NOT NULL,
-    autonomy text,
-    behaviour text,
-    context text,
-    CONSTRAINT levelofskill_level_check CHECK (((level > 0) AND (level <= 5)))
-);
-
-
-ALTER TABLE levelofskill OWNER TO postgres;
-
---
 -- Name: professionaltask; Type: TABLE; Schema: study; Owner: postgres
 --
 
@@ -878,27 +1003,6 @@ CREATE TABLE professionaltask (
 
 
 ALTER TABLE professionaltask OWNER TO postgres;
-
---
--- Name: qualification; Type: TABLE; Schema: study; Owner: postgres
---
-
-CREATE TABLE qualification (
-    id integer NOT NULL,
-    architecturallayer_id integer,
-    activity_id integer,
-    levelofskill_id integer
-);
-
-
-ALTER TABLE qualification OWNER TO postgres;
-
---
--- Name: TABLE qualification; Type: COMMENT; Schema: study; Owner: postgres
---
-
-COMMENT ON TABLE qualification IS 'Contains all possible combinations of architectural layer, activity and level of skill';
-
 
 --
 -- Name: hboi_matrix; Type: VIEW; Schema: study; Owner: fmms
@@ -921,25 +1025,6 @@ CREATE VIEW hboi_matrix AS
 ALTER TABLE hboi_matrix OWNER TO fmms;
 
 --
--- Name: learninggoal; Type: TABLE; Schema: study; Owner: postgres
---
-
-CREATE TABLE learninggoal (
-    id integer NOT NULL,
-    module_id integer NOT NULL,
-    description text,
-    sequenceno smallint DEFAULT 1 NOT NULL,
-    weight numeric(3,2) DEFAULT NULL::numeric,
-    grading_id integer,
-    CONSTRAINT learninggoal_sequence_checl CHECK ((sequenceno > 0)),
-    CONSTRAINT learninggoal_weight_check CHECK (((weight >= 0.0) AND (weight <= 1.0))),
-    CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL))
-);
-
-
-ALTER TABLE learninggoal OWNER TO postgres;
-
---
 -- Name: learning_goal_id_seq; Type: SEQUENCE; Schema: study; Owner: postgres
 --
 
@@ -959,19 +1044,6 @@ ALTER TABLE learning_goal_id_seq OWNER TO postgres;
 
 ALTER SEQUENCE learning_goal_id_seq OWNED BY learninggoal.id;
 
-
---
--- Name: learninggoal_qualification; Type: TABLE; Schema: study; Owner: postgres
---
-
-CREATE TABLE learninggoal_qualification (
-    id integer NOT NULL,
-    learninggoal_id integer,
-    qualification_id integer
-);
-
-
-ALTER TABLE learninggoal_qualification OWNER TO postgres;
 
 --
 -- Name: learning_goal_qualification_id_seq; Type: SEQUENCE; Schema: study; Owner: postgres
