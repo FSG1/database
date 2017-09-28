@@ -5,10 +5,11 @@ MAINTAINER Tobias Derksen <tobias.derksen@student.fontys.nl>
 ENV POSTGRES_USER fmms
 ENV POSTGRES_PASSWORD test123456
 
-RUN mkdir -p /docker-entrypoint-initdb.d
-COPY before.sql /docker-entrypoint-initdb.d/0-before.sql
-COPY after.sql /docker-entrypoint-initdb.d/9999-after.sql
-COPY schemas/latest.sql /docker-entrypoint-initdb.d/80-latest.sql
+COPY scripts/before.sql /docker-entrypoint-initdb.d/0-before.sql
+COPY scripts/latest.sql /docker-entrypoint-initdb.d/50-latest.sql
+COPY scripts/after.sql /docker-entrypoint-initdb.d/99-after.sql
+COPY scripts/clean.sh /docker-entrypoint-initdb.d/999-clean.sh
+RUN chmod -R 777 /docker-entrypoint-initdb.d
 
 EXPOSE 5432
 
