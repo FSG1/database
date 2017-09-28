@@ -5,7 +5,7 @@ if [ -f scripts/latest.sql ]; then
     rm -f history/$(date +%Y%m%d.sql)
   fi
 
-  mv scripts/latest.sql history/$(date -r schemas/latest.sql +%Y%m%d.sql)
+  mv scripts/latest.sql history/$(date -r scripts/latest.sql +%Y%m%d.sql)
 fi
 
 pg_dump -U fmms -d fmms -s > scripts/latest.sql
