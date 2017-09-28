@@ -1,0 +1,12 @@
+
+dist: trusty
+sudo: required
+
+services:
+  - docker
+
+script:
+  - docker build -t fmms/db .
+
+notifications:
+  email: false
