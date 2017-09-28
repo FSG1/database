@@ -76,6 +76,68 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 -- IS 'PL/pgSQL procedural language';
 
 
+SET search_path = study, pg_catalog;
+
+--
+-- Name: learninggoal_create(); Type: FUNCTION; Schema: study; Owner: fmms
+--
+
+CREATE FUNCTION learninggoal_create() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    r RECORD;
+BEGIN
+    -- check if sequence number does exists
+    select * into r from study.learninggoal where module_id = NEW.module_id and sequenceno = NEW.sequenceno;
+
+    IF found THEN
+        return OLD;
+    END IF;
+
+    -- check if weights does not add up below 100%
+    select sum(weight) as sum into r from study.learninggoal where module_id = NEW.module_id;
+    if ((r.sum + NEW.weight) > 1.0) THEN
+        return OLD;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION study.learninggoal_create() OWNER TO fmms;
+
+--
+-- Name: learninggoal_update(); Type: FUNCTION; Schema: study; Owner: fmms
+--
+
+CREATE FUNCTION learninggoal_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    r RECORD;
+BEGIN
+    -- check if sequence number does exists
+    select * into r from study.learninggoal where module_id = NEW.module_id and id != NEW.id and sequenceno = NEW.sequenceno;
+
+    IF found THEN
+        return OLD;
+    END IF;
+
+    -- check if weights does not add up below 100%
+    select sum(weight) as sum into r from study.learninggoal where module_id = NEW.module_id;
+    if (r.sum > 1.0) THEN
+        return OLD;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION study.learninggoal_update() OWNER TO fmms;
+
 SET search_path = descriptions, pg_catalog;
 
 SET default_tablespace = '';
@@ -466,7 +528,9 @@ CREATE TABLE moduleassessment (
     minimumgrade numeric(2,1) DEFAULT 5.5,
     remarks text,
     module_id integer NOT NULL,
-    description text NOT NULL
+    description text NOT NULL,
+    CONSTRAINT assessment_minimum_grade_check CHECK (((minimumgrade IS NULL) OR ((minimumgrade > 0.0) AND (minimumgrade <= 10.0)))),
+    CONSTRAINT assessment_weight_check CHECK (((weight >= 0.0) AND (weight <= 1.0)))
 );
 
 
@@ -574,7 +638,11 @@ CREATE TABLE module (
     credits smallint NOT NULL,
     lecturesperweek smallint,
     practicalperweek smallint,
-    totaleffort smallint NOT NULL
+    totaleffort smallint NOT NULL,
+    CONSTRAINT module_credits_check CHECK (((credits >= 0) AND (credits <= 30))),
+    CONSTRAINT module_lectureperweek_check CHECK (((lecturesperweek IS NULL) OR (lecturesperweek >= 0))),
+    CONSTRAINT module_practicalperweek_check CHECK (((practicalperweek IS NULL) OR (practicalperweek >= 0))),
+    CONSTRAINT module_totalefforts_check CHECK (((totaleffort >= 0) AND (totaleffort <= (credits * 30))))
 );
 
 
@@ -588,7 +656,8 @@ CREATE TABLE module_profile (
     id integer NOT NULL,
     module_id integer NOT NULL,
     profile_id integer NOT NULL,
-    semester smallint NOT NULL
+    semester smallint NOT NULL,
+    CONSTRAINT moduleprofile_semester_check CHECK (((semester > 0) AND (semester <= 8)))
 );
 
 
@@ -790,7 +859,8 @@ CREATE TABLE levelofskill (
     level smallint NOT NULL,
     autonomy text,
     behaviour text,
-    context text
+    context text,
+    CONSTRAINT levelofskill_level_check CHECK (((level > 0) AND (level <= 5)))
 );
 
 
@@ -861,6 +931,8 @@ CREATE TABLE learninggoal (
     sequenceno smallint DEFAULT 1 NOT NULL,
     weight numeric(3,2) DEFAULT NULL::numeric,
     grading_id integer,
+    CONSTRAINT learninggoal_sequence_checl CHECK ((sequenceno > 0)),
+    CONSTRAINT learninggoal_weight_check CHECK (((weight >= 0.0) AND (weight <= 1.0))),
     CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL))
 );
 
@@ -1033,6 +1105,7 @@ CREATE TABLE moduledependency (
     dependency_module_id integer NOT NULL,
     mandatory boolean DEFAULT false NOT NULL,
     concurrent boolean DEFAULT false NOT NULL,
+    CONSTRAINT dependency_concurrent_check CHECK (((concurrent = false) OR (mandatory = false))),
     CONSTRAINT ids_not_null CHECK (((module_id IS NOT NULL) AND (dependency_module_id IS NOT NULL)))
 );
 
@@ -1104,7 +1177,8 @@ CREATE TABLE moduletopic (
     module_id integer,
     sequenceno smallint DEFAULT 1 NOT NULL,
     description text NOT NULL,
-    CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL))
+    CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL)),
+    CONSTRAINT topic_sequence_check CHECK ((sequenceno > 0))
 );
 
 
@@ -2468,6 +2542,24 @@ CREATE RULE protect_final_descriptions_delete AS
 CREATE RULE protect_final_descriptions_update AS
     ON UPDATE TO moduledescription DO INSTEAD NOTHING;
 
+
+SET search_path = study, pg_catalog;
+
+--
+-- Name: learninggoal trigger_learninggoal_create; Type: TRIGGER; Schema: study; Owner: postgres
+--
+
+CREATE TRIGGER trigger_learninggoal_create BEFORE INSERT ON learninggoal FOR EACH ROW EXECUTE PROCEDURE learninggoal_update();
+
+
+--
+-- Name: learninggoal trigger_learninggoal_update; Type: TRIGGER; Schema: study; Owner: postgres
+--
+
+CREATE TRIGGER trigger_learninggoal_update BEFORE UPDATE OF sequenceno, weight ON learninggoal FOR EACH ROW EXECUTE PROCEDURE learninggoal_update();
+
+
+SET search_path = descriptions, pg_catalog;
 
 --
 -- Name: author author_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
