@@ -7,7 +7,7 @@ services:
   - docker
 
 script:
-  - docker build -t fmms/db .
+  - docker build -t fmmsdb .
 
 notifications:
   email: false
