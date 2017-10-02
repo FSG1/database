@@ -1,17 +1,19 @@
-FROM postgres:alpine
+FROM ubuntu:rolling
 
-MAINTAINER Tobias Derksen <tobias.derksen@student.fontys.nl>
+LABEL maintainer="Tobias Derksen <tobias.derksen@student.fontys.nl>"
 
-ENV POSTGRES_USER fmms
-ENV POSTGRES_PASSWORD test123456
+RUN apt-get update && apt-get -y install postgresql postgresql-contrib nano less && mkdir -p /tmp/init
 
-COPY scripts/before.sql /docker-entrypoint-initdb.d/0-before.sql
-COPY scripts/latest.sql /docker-entrypoint-initdb.d/50-latest.sql
-COPY scripts/after.sql /docker-entrypoint-initdb.d/99-after.sql
-COPY scripts/clean.sh /docker-entrypoint-initdb.d/999-clean.sh
-RUN chmod -R 777 /docker-entrypoint-initdb.d
+COPY config/pg_hba.conf config/postgresql.conf /etc/postgresql/9.6/main/
+COPY scripts/ /tmp/init/
+COPY import.sh /tmp/import.sh
+COPY startup.sh /startup.sh
 
-EXPOSE 5432
+USER postgres
+RUN /tmp/import.sh
 
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["postgres"]
+# USER root
+# CMD ["/usr/lib/postgresql/9.6/bin/postgres"]
+# CMD ["/bin/bash"]
+
+CMD ["/startup.sh"]
