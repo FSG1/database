@@ -8,7 +8,7 @@ fi
 psql --command "CREATE USER fmms WITH SUPERUSER PASSWORD 'fmms';"
 createdb -O fmms fmms
 
-for f in /tmp/init/*.sql;
+for f in /init/*.sql;
 do
   echo "$f"
   psql -U fmms -d fmms -f "$f"
