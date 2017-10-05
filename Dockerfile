@@ -9,7 +9,9 @@ COPY scripts/ /tmp/init/
 COPY import.sh /tmp/
 
 USER postgres
-RUN /tmp/import.sh
+
+WORKDIR /
+RUN sh -c tmp/import.sh
 
 EXPOSE 5432
 VOLUME /var/lib/postgresql/9.6/main
