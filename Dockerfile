@@ -15,4 +15,5 @@ RUN /import.sh
 # CMD ["/usr/lib/postgresql/9.6/bin/postgres"]
 # CMD ["/bin/bash"]
 
-CMD ["/startup.sh"]
+ENTRYPOINT [ "/usr/lib/postgresql/9.6/bin/postgres" ]
+CMD [ "-D", "/var/lib/postgresql/9.6/main", "-c", "config_file=/etc/postgresql/9.6/main/postgresql.conf" ]
