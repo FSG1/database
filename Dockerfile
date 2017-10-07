@@ -12,10 +12,10 @@ WORKDIR /
 USER postgres
 
 # Create user and database
-RUN service postgresql start && psql --command "CREATE USER fmms WITH SUPERUSER PASSWORD 'fmms';" && createdb -O fmms fmms
+RUN service postgresql start && psql --command "CREATE USER fmms WITH SUPERUSER PASSWORD 'fmms';" && createdb -O fmms fmms && service postgresql stop
 
 # Import structure and data
-RUN service postgresql start && for f in /tmp/init/*.sql; do psql -U fmms -d fmms -f "$f"; done
+RUN service postgresql start && for f in /tmp/init/*.sql; do psql -U fmms -d fmms -f "$f"; done && service postgresql stop
 
 EXPOSE 5432
 VOLUME /var/lib/postgresql/9.6/main
