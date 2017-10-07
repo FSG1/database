@@ -2,15 +2,20 @@ FROM ubuntu:rolling
 
 LABEL maintainer="Tobias Derksen <tobias.derksen@student.fontys.nl>"
 
-RUN apt-get update && apt-get -y install postgresql postgresql-contrib && mkdir -p /tmp/init
+RUN apt-get update && apt-get -y install postgresql postgresql-contrib
+RUN  mkdir -p /tmp/init
 
 COPY config/pg_hba.conf config/postgresql.conf /etc/postgresql/9.6/main/
 COPY scripts/ /tmp/init/
-COPY import.sh /tmp/import.sh
 
 WORKDIR /
 USER postgres
-RUN sh -c /tmp/import.sh
+
+# Create user and database
+RUN service postgresql start && psql --command "CREATE USER fmms WITH SUPERUSER PASSWORD 'fmms';" && createdb -O fmms fmms
+
+# Import structure and data
+RUN service postgresql start && for f in /tmp/init/*.sql; do psql -U fmms -d fmms -f "$f"; done
 
 EXPOSE 5432
 VOLUME /var/lib/postgresql/9.6/main
