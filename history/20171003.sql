@@ -1,5 +1,5 @@
 --
--- PostgreSQL database dump
+-- fmmsQL database dump
 --
 
 -- Dumped from database version 9.6.5
@@ -450,111 +450,6 @@ ALTER SEQUENCE topic_id_seq OWNED BY topic.id;
 SET search_path = study, pg_catalog;
 
 --
--- Name: curriculum; Type: TABLE; Schema: study; Owner: fmms
---
-
-CREATE TABLE curriculum (
-    id integer NOT NULL,
-    name character varying(100) NOT NULL,
-    description text,
-    startcohort smallint NOT NULL,
-    owner_employee_id integer NOT NULL,
-    department_id integer NOT NULL
-);
-
-
-ALTER TABLE curriculum OWNER TO fmms;
-
---
--- Name: module; Type: TABLE; Schema: study; Owner: fmms
---
-
-CREATE TABLE module (
-    id integer NOT NULL,
-    code character varying(10) NOT NULL,
-    name text NOT NULL,
-    credits smallint NOT NULL,
-    lecturesperweek smallint,
-    practicalperweek smallint,
-    totaleffort smallint NOT NULL,
-    CONSTRAINT module_credits_check CHECK (((credits >= 0) AND (credits <= 30))),
-    CONSTRAINT module_lectureperweek_check CHECK (((lecturesperweek IS NULL) OR (lecturesperweek >= 0))),
-    CONSTRAINT module_practicalperweek_check CHECK (((practicalperweek IS NULL) OR (practicalperweek >= 0))),
-    CONSTRAINT module_totalefforts_check CHECK (((totaleffort >= 0) AND (totaleffort <= (credits * 30))))
-);
-
-
-ALTER TABLE module OWNER TO fmms;
-
---
--- Name: module_profile; Type: TABLE; Schema: study; Owner: fmms
---
-
-CREATE TABLE module_profile (
-    id integer NOT NULL,
-    module_id integer NOT NULL,
-    profile_id integer NOT NULL,
-    semester smallint NOT NULL,
-    CONSTRAINT moduleprofile_semester_check CHECK (((semester > 0) AND (semester <= 8)))
-);
-
-
-ALTER TABLE module_profile OWNER TO fmms;
-
---
--- Name: profile; Type: TABLE; Schema: study; Owner: fmms
---
-
-CREATE TABLE profile (
-    id integer NOT NULL,
-    curriculum_id integer,
-    studyprogramme_id integer
-);
-
-
-ALTER TABLE profile OWNER TO fmms;
-
---
--- Name: studyprogramme; Type: TABLE; Schema: study; Owner: fmms
---
-
-CREATE TABLE studyprogramme (
-    id integer NOT NULL,
-    code character varying(10) NOT NULL,
-    name character varying(255) NOT NULL
-);
-
-
-ALTER TABLE studyprogramme OWNER TO fmms;
-
-SET search_path = public, pg_catalog;
-
---
--- Name: curriculum_overview; Type: VIEW; Schema: public; Owner: fmms
---
-
-CREATE VIEW curriculum_overview AS
- SELECT c.name,
-    sp.id AS study_programme_id,
-    sp.code AS study_programme,
-    mp.semester,
-    m.code AS module_code,
-    m.name AS module_name,
-    m.credits
-   FROM study.profile p,
-    study.module_profile mp,
-    study.module m,
-    study.curriculum c,
-    study.studyprogramme sp
-  WHERE ((p.id = mp.profile_id) AND (m.id = mp.module_id) AND (p.curriculum_id = c.id) AND (p.studyprogramme_id = sp.id))
-  ORDER BY p.id, mp.semester, m.code;
-
-
-ALTER TABLE curriculum_overview OWNER TO fmms;
-
-SET search_path = study, pg_catalog;
-
---
 -- Name: activity; Type: TABLE; Schema: study; Owner: fmms
 --
 
@@ -696,6 +591,84 @@ ALTER SEQUENCE asssementtype_id_seq OWNED BY moduleasssementtype.id;
 
 
 --
+-- Name: curriculum; Type: TABLE; Schema: study; Owner: fmms
+--
+
+CREATE TABLE curriculum (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    description text,
+    startcohort smallint NOT NULL,
+    owner_employee_id integer NOT NULL,
+    department_id integer NOT NULL
+);
+
+
+ALTER TABLE curriculum OWNER TO fmms;
+
+--
+-- Name: module; Type: TABLE; Schema: study; Owner: fmms
+--
+
+CREATE TABLE module (
+    id integer NOT NULL,
+    code character varying(10) NOT NULL,
+    name text NOT NULL,
+    credits smallint NOT NULL,
+    lecturesperweek smallint,
+    practicalperweek smallint,
+    totaleffort smallint NOT NULL,
+    CONSTRAINT module_credits_check CHECK (((credits >= 0) AND (credits <= 30))),
+    CONSTRAINT module_lectureperweek_check CHECK (((lecturesperweek IS NULL) OR (lecturesperweek >= 0))),
+    CONSTRAINT module_practicalperweek_check CHECK (((practicalperweek IS NULL) OR (practicalperweek >= 0))),
+    CONSTRAINT module_totalefforts_check CHECK (((totaleffort >= 0) AND (totaleffort <= (credits * 30))))
+);
+
+
+ALTER TABLE module OWNER TO fmms;
+
+--
+-- Name: module_profile; Type: TABLE; Schema: study; Owner: fmms
+--
+
+CREATE TABLE module_profile (
+    id integer NOT NULL,
+    module_id integer NOT NULL,
+    profile_id integer NOT NULL,
+    semester smallint NOT NULL,
+    CONSTRAINT moduleprofile_semester_check CHECK (((semester > 0) AND (semester <= 8)))
+);
+
+
+ALTER TABLE module_profile OWNER TO fmms;
+
+--
+-- Name: profile; Type: TABLE; Schema: study; Owner: fmms
+--
+
+CREATE TABLE profile (
+    id integer NOT NULL,
+    curriculum_id integer,
+    studyprogramme_id integer
+);
+
+
+ALTER TABLE profile OWNER TO fmms;
+
+--
+-- Name: studyprogramme; Type: TABLE; Schema: study; Owner: fmms
+--
+
+CREATE TABLE studyprogramme (
+    id integer NOT NULL,
+    code character varying(10) NOT NULL,
+    name character varying(255) NOT NULL
+);
+
+
+ALTER TABLE studyprogramme OWNER TO fmms;
+
+--
 -- Name: curriculum_overview; Type: VIEW; Schema: study; Owner: fmms
 --
 
@@ -705,8 +678,7 @@ CREATE VIEW curriculum_overview AS
     mp.semester,
     m.code AS module_code,
     m.name AS module_name,
-    m.credits,
-    sp.id AS study_programme_id
+    m.credits
    FROM profile p,
     module_profile mp,
     module m,
@@ -3029,10 +3001,13 @@ ALTER TABLE ONLY user_role
 -- Name: study; Type: ACL; Schema: -; Owner: fmms
 --
 
+REVOKE ALL ON SCHEMA study FROM fmms;
+REVOKE ALL ON SCHEMA study FROM PUBLIC;
+GRANT ALL ON SCHEMA study TO fmms;
 GRANT ALL ON SCHEMA study TO PUBLIC;
 
 
 --
--- PostgreSQL database dump complete
+-- fmmsQL database dump complete
 --
 
