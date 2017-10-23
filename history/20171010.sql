@@ -743,7 +743,6 @@ CREATE TABLE learninggoal (
     sequenceno smallint DEFAULT 1 NOT NULL,
     weight numeric(3,2) DEFAULT NULL::numeric,
     grading_id integer,
-    groupgoal boolean DEFAULT false NOT NULL,
     CONSTRAINT learninggoal_sequence_checl CHECK ((sequenceno > 0)),
     CONSTRAINT learninggoal_weight_check CHECK (((weight >= 0.0) AND (weight <= 1.0))),
     CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL))
