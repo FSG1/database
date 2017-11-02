@@ -742,7 +742,6 @@ CREATE TABLE learninggoal (
     description text,
     sequenceno smallint DEFAULT 1 NOT NULL,
     weight numeric(3,2) DEFAULT NULL::numeric,
-    grading_id integer,
     groupgoal boolean DEFAULT false NOT NULL,
     CONSTRAINT learninggoal_sequence_checl CHECK ((sequenceno > 0)),
     CONSTRAINT learninggoal_weight_check CHECK (((weight >= 0.0) AND (weight <= 1.0))),
@@ -958,39 +957,6 @@ ALTER TABLE employee_id_seq OWNER TO fmms;
 --
 
 ALTER SEQUENCE employee_id_seq OWNED BY employee.id;
-
-
---
--- Name: grading; Type: TABLE; Schema: study; Owner: fmms
---
-
-CREATE TABLE grading (
-    id integer NOT NULL,
-    name text NOT NULL
-);
-
-
-ALTER TABLE grading OWNER TO fmms;
-
---
--- Name: grading_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
---
-
-CREATE SEQUENCE grading_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE grading_id_seq OWNER TO fmms;
-
---
--- Name: grading_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
---
-
-ALTER SEQUENCE grading_id_seq OWNED BY grading.id;
 
 
 --
@@ -1879,13 +1845,6 @@ ALTER TABLE ONLY employee_department ALTER COLUMN id SET DEFAULT nextval('employ
 
 
 --
--- Name: grading id; Type: DEFAULT; Schema: study; Owner: fmms
---
-
-ALTER TABLE ONLY grading ALTER COLUMN id SET DEFAULT nextval('grading_id_seq'::regclass);
-
-
---
 -- Name: learninggoal id; Type: DEFAULT; Schema: study; Owner: fmms
 --
 
@@ -2159,14 +2118,6 @@ ALTER TABLE ONLY employee
 
 
 --
--- Name: grading grading_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
---
-
-ALTER TABLE ONLY grading
-    ADD CONSTRAINT grading_pkey PRIMARY KEY (id);
-
-
---
 -- Name: learninggoal learning_goal_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
 --
 
@@ -2180,14 +2131,6 @@ ALTER TABLE ONLY learninggoal
 
 ALTER TABLE ONLY learninggoal_qualification
     ADD CONSTRAINT learning_goal_qualification_pk PRIMARY KEY (id);
-
-
---
--- Name: learninggoal learninggoal_grading_id_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
---
-
-ALTER TABLE ONLY learninggoal
-    ADD CONSTRAINT learninggoal_grading_id_pk UNIQUE (grading_id);
 
 
 --
@@ -2819,14 +2762,6 @@ ALTER TABLE ONLY employee_department
 
 ALTER TABLE ONLY learninggoal_qualification
     ADD CONSTRAINT learning_goal_id_fk FOREIGN KEY (learninggoal_id) REFERENCES learninggoal(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
-
-
---
--- Name: learninggoal learninggoal_grading_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
---
-
-ALTER TABLE ONLY learninggoal
-    ADD CONSTRAINT learninggoal_grading_id_fk FOREIGN KEY (grading_id) REFERENCES grading(id) ON UPDATE CASCADE;
 
 
 --

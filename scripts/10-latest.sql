@@ -1145,6 +1145,7 @@ CREATE TABLE moduledependency (
     dependency_module_id integer NOT NULL,
     mandatory boolean DEFAULT false NOT NULL,
     concurrent boolean DEFAULT false NOT NULL,
+    remarks text,
     CONSTRAINT dependency_concurrent_check CHECK (((concurrent = false) OR (mandatory = false))),
     CONSTRAINT ids_not_null CHECK (((module_id IS NOT NULL) AND (dependency_module_id IS NOT NULL)))
 );
@@ -1515,6 +1516,20 @@ CREATE VIEW qualification_match_modules AS
 
 
 ALTER TABLE qualification_match_modules OWNER TO fmms;
+
+--
+-- Name: qualifications_after_module; Type: VIEW; Schema: study; Owner: fmms
+--
+
+CREATE VIEW qualifications_after_module AS
+ SELECT m.code
+   FROM (((module m
+     JOIN learninggoal lg ON ((lg.module_id = m.id)))
+     JOIN learninggoal_qualification lg2q ON ((lg2q.learninggoal_id = lg.id)))
+     JOIN qualification q ON ((lg2q.qualification_id = q.id)));
+
+
+ALTER TABLE qualifications_after_module OWNER TO fmms;
 
 --
 -- Name: qualifications_after_semester; Type: VIEW; Schema: study; Owner: fmms
