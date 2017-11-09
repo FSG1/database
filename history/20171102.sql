@@ -618,7 +618,6 @@ CREATE TABLE module (
     lecturesperweek smallint,
     practicalperweek smallint,
     totaleffort smallint NOT NULL,
-    isproject boolean DEFAULT false NOT NULL,
     CONSTRAINT module_credits_check CHECK (((credits >= 0) AND (credits <= 30))),
     CONSTRAINT module_lectureperweek_check CHECK (((lecturesperweek IS NULL) OR (lecturesperweek >= 0))),
     CONSTRAINT module_practicalperweek_check CHECK (((practicalperweek IS NULL) OR (practicalperweek >= 0))),
