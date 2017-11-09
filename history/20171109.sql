@@ -680,8 +680,7 @@ CREATE VIEW curriculum_overview AS
     m.code AS module_code,
     m.name AS module_name,
     m.credits,
-    sp.id AS study_programme_id,
-    m.isproject
+    sp.id AS study_programme_id
    FROM profile p,
     module_profile mp,
     module m,
