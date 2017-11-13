@@ -5,7 +5,7 @@ DECLARE
         WHERE schemaname IN ('descriptions', 'study', 'users');
 BEGIN
     FOR stmt IN statements LOOP
-        EXECUTE 'ALTER TABLE ' || quote_ident(stmt.schemaname) || '.' || quote_ident(stmt.tablename) || ' OWNER TO fmms;';
+        EXECUTE 'ALTER TABLE ' || quote_ident(stmt.schemaname) || '.' || quote_ident(stmt.tablename) || ' OWNER TO module;';
     END LOOP;
 END;
 $$ LANGUAGE plpgsql;

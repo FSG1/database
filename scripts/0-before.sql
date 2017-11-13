@@ -7,7 +7,7 @@ SET check_function_bodies = false;
 SET client_min_messages = warning;
 SET row_security = off;
 
-ALTER DATABASE fmms OWNER TO fmms;
+ALTER DATABASE modulemanagement OWNER TO module;
 
 DROP SCHEMA IF EXISTS public;
 DROP SCHEMA IF EXISTS descriptions;
