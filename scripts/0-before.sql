@@ -9,7 +9,6 @@ SET row_security = off;
 
 ALTER DATABASE modulemanagement OWNER TO module;
 
-DROP SCHEMA IF EXISTS public;
 DROP SCHEMA IF EXISTS descriptions;
 DROP SCHEMA IF EXISTS study;
 DROP SCHEMA IF EXISTS users;
