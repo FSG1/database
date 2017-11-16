@@ -15,48 +15,48 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: descriptions; Type: SCHEMA; Schema: -; Owner: module
+-- Name: descriptions; Type: SCHEMA; Schema: -; Owner: fmms
 --
 
 CREATE SCHEMA descriptions;
 
 
-ALTER SCHEMA descriptions OWNER TO module;
+ALTER SCHEMA descriptions OWNER TO fmms;
 
 --
--- Name: SCHEMA descriptions; Type: COMMENT; Schema: -; Owner: module
+-- Name: SCHEMA descriptions; Type: COMMENT; Schema: -; Owner: fmms
 --
 
 COMMENT ON SCHEMA descriptions IS 'Schema contains all module description and their history.';
 
 
 --
--- Name: study; Type: SCHEMA; Schema: -; Owner: module
+-- Name: study; Type: SCHEMA; Schema: -; Owner: fmms
 --
 
 CREATE SCHEMA study;
 
 
-ALTER SCHEMA study OWNER TO module;
+ALTER SCHEMA study OWNER TO fmms;
 
 --
--- Name: SCHEMA study; Type: COMMENT; Schema: -; Owner: module
+-- Name: SCHEMA study; Type: COMMENT; Schema: -; Owner: fmms
 --
 
 COMMENT ON SCHEMA study IS 'Schema contains all data about study programs.';
 
 
 --
--- Name: users; Type: SCHEMA; Schema: -; Owner: module
+-- Name: users; Type: SCHEMA; Schema: -; Owner: fmms
 --
 
 CREATE SCHEMA users;
 
 
-ALTER SCHEMA users OWNER TO module;
+ALTER SCHEMA users OWNER TO fmms;
 
 --
--- Name: SCHEMA users; Type: COMMENT; Schema: -; Owner: module
+-- Name: SCHEMA users; Type: COMMENT; Schema: -; Owner: fmms
 --
 
 COMMENT ON SCHEMA users IS 'Schema contains alls user data which are needed to use the software.';
@@ -76,10 +76,54 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 -- IS 'PL/pgSQL procedural language';
 
 
+SET search_path = public, pg_catalog;
+
+--
+-- Name: avoid_update_released_module(); Type: FUNCTION; Schema: public; Owner: fmms
+--
+
+CREATE FUNCTION avoid_update_released_module() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+    DECLARE
+	item_released integer;
+	item_type text := TG_ARGV[0];
+
+    BEGIN
+	IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN    
+		SELECT count(*) INTO item_released
+		FROM released_items
+		WHERE id_type = item_type AND id = NEW.id;
+	END IF;
+
+	IF (TG_OP = 'DELETE') THEN    
+		SELECT count(*) INTO item_released
+		FROM released_items
+		WHERE id_type = item_type AND id = OLD.id;
+	END IF;
+ 
+        IF item_released <> 0 THEN
+            RAISE EXCEPTION 'Module released; changes not possible anymore. Create new revision of this module';
+        END IF;
+
+	IF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN    
+		RETURN NEW;
+	END IF;
+	
+	IF (TG_OP = 'DELETE') THEN    
+		RETURN OLD;
+	END IF;
+
+    END;
+$$;
+
+
+ALTER FUNCTION public.avoid_update_released_module() OWNER TO fmms;
+
 SET search_path = study, pg_catalog;
 
 --
--- Name: learninggoal_create(); Type: FUNCTION; Schema: study; Owner: module
+-- Name: learninggoal_create(); Type: FUNCTION; Schema: study; Owner: fmms
 --
 
 CREATE FUNCTION learninggoal_create() RETURNS trigger
@@ -106,10 +150,10 @@ END;
 $$;
 
 
-ALTER FUNCTION study.learninggoal_create() OWNER TO module;
+ALTER FUNCTION study.learninggoal_create() OWNER TO fmms;
 
 --
--- Name: learninggoal_update(); Type: FUNCTION; Schema: study; Owner: module
+-- Name: learninggoal_update(); Type: FUNCTION; Schema: study; Owner: fmms
 --
 
 CREATE FUNCTION learninggoal_update() RETURNS trigger
@@ -136,7 +180,7 @@ END;
 $$;
 
 
-ALTER FUNCTION study.learninggoal_update() OWNER TO module;
+ALTER FUNCTION study.learninggoal_update() OWNER TO fmms;
 
 SET search_path = descriptions, pg_catalog;
 
@@ -145,7 +189,7 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
--- Name: author; Type: TABLE; Schema: descriptions; Owner: module
+-- Name: author; Type: TABLE; Schema: descriptions; Owner: fmms
 --
 
 CREATE TABLE author (
@@ -156,10 +200,10 @@ CREATE TABLE author (
 );
 
 
-ALTER TABLE author OWNER TO module;
+ALTER TABLE author OWNER TO fmms;
 
 --
--- Name: authors_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: module
+-- Name: authors_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: fmms
 --
 
 CREATE SEQUENCE authors_id_seq
@@ -170,17 +214,17 @@ CREATE SEQUENCE authors_id_seq
     CACHE 1;
 
 
-ALTER TABLE authors_id_seq OWNER TO module;
+ALTER TABLE authors_id_seq OWNER TO fmms;
 
 --
--- Name: authors_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: module
+-- Name: authors_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: fmms
 --
 
 ALTER SEQUENCE authors_id_seq OWNED BY author.id;
 
 
 --
--- Name: competence; Type: TABLE; Schema: descriptions; Owner: module
+-- Name: competence; Type: TABLE; Schema: descriptions; Owner: fmms
 --
 
 CREATE TABLE competence (
@@ -193,17 +237,17 @@ CREATE TABLE competence (
 );
 
 
-ALTER TABLE competence OWNER TO module;
+ALTER TABLE competence OWNER TO fmms;
 
 --
--- Name: COLUMN competence.levelofskill; Type: COMMENT; Schema: descriptions; Owner: module
+-- Name: COLUMN competence.levelofskill; Type: COMMENT; Schema: descriptions; Owner: fmms
 --
 
 COMMENT ON COLUMN competence.levelofskill IS 'Skill Level value for activitiy entry';
 
 
 --
--- Name: competence_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: module
+-- Name: competence_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: fmms
 --
 
 CREATE SEQUENCE competence_id_seq
@@ -214,17 +258,17 @@ CREATE SEQUENCE competence_id_seq
     CACHE 1;
 
 
-ALTER TABLE competence_id_seq OWNER TO module;
+ALTER TABLE competence_id_seq OWNER TO fmms;
 
 --
--- Name: competence_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: module
+-- Name: competence_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: fmms
 --
 
 ALTER SEQUENCE competence_id_seq OWNED BY competence.id;
 
 
 --
--- Name: dependency; Type: TABLE; Schema: descriptions; Owner: module
+-- Name: dependency; Type: TABLE; Schema: descriptions; Owner: fmms
 --
 
 CREATE TABLE dependency (
@@ -237,10 +281,10 @@ CREATE TABLE dependency (
 );
 
 
-ALTER TABLE dependency OWNER TO module;
+ALTER TABLE dependency OWNER TO fmms;
 
 --
--- Name: dependency_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: module
+-- Name: dependency_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: fmms
 --
 
 CREATE SEQUENCE dependency_id_seq
@@ -251,17 +295,17 @@ CREATE SEQUENCE dependency_id_seq
     CACHE 1;
 
 
-ALTER TABLE dependency_id_seq OWNER TO module;
+ALTER TABLE dependency_id_seq OWNER TO fmms;
 
 --
--- Name: dependency_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: module
+-- Name: dependency_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: fmms
 --
 
 ALTER SEQUENCE dependency_id_seq OWNED BY dependency.id;
 
 
 --
--- Name: learninggoal; Type: TABLE; Schema: descriptions; Owner: module
+-- Name: learninggoal; Type: TABLE; Schema: descriptions; Owner: fmms
 --
 
 CREATE TABLE learninggoal (
@@ -273,10 +317,10 @@ CREATE TABLE learninggoal (
 );
 
 
-ALTER TABLE learninggoal OWNER TO module;
+ALTER TABLE learninggoal OWNER TO fmms;
 
 --
--- Name: learninggoal_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: module
+-- Name: learninggoal_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: fmms
 --
 
 CREATE SEQUENCE learninggoal_id_seq
@@ -287,17 +331,17 @@ CREATE SEQUENCE learninggoal_id_seq
     CACHE 1;
 
 
-ALTER TABLE learninggoal_id_seq OWNER TO module;
+ALTER TABLE learninggoal_id_seq OWNER TO fmms;
 
 --
--- Name: learninggoal_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: module
+-- Name: learninggoal_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: fmms
 --
 
 ALTER SEQUENCE learninggoal_id_seq OWNED BY learninggoal.id;
 
 
 --
--- Name: moduleassessment; Type: TABLE; Schema: descriptions; Owner: module
+-- Name: moduleassessment; Type: TABLE; Schema: descriptions; Owner: fmms
 --
 
 CREATE TABLE moduleassessment (
@@ -310,10 +354,10 @@ CREATE TABLE moduleassessment (
 );
 
 
-ALTER TABLE moduleassessment OWNER TO module;
+ALTER TABLE moduleassessment OWNER TO fmms;
 
 --
--- Name: moduleassessment_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: module
+-- Name: moduleassessment_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: fmms
 --
 
 CREATE SEQUENCE moduleassessment_id_seq
@@ -324,17 +368,17 @@ CREATE SEQUENCE moduleassessment_id_seq
     CACHE 1;
 
 
-ALTER TABLE moduleassessment_id_seq OWNER TO module;
+ALTER TABLE moduleassessment_id_seq OWNER TO fmms;
 
 --
--- Name: moduleassessment_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: module
+-- Name: moduleassessment_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: fmms
 --
 
 ALTER SEQUENCE moduleassessment_id_seq OWNED BY moduleassessment.id;
 
 
 --
--- Name: moduledescription; Type: TABLE; Schema: descriptions; Owner: module
+-- Name: moduledescription; Type: TABLE; Schema: descriptions; Owner: fmms
 --
 
 CREATE TABLE moduledescription (
@@ -361,38 +405,38 @@ CREATE TABLE moduledescription (
 );
 
 
-ALTER TABLE moduledescription OWNER TO module;
+ALTER TABLE moduledescription OWNER TO fmms;
 
 --
--- Name: COLUMN moduledescription.architectuallayers; Type: COMMENT; Schema: descriptions; Owner: module
+-- Name: COLUMN moduledescription.architectuallayers; Type: COMMENT; Schema: descriptions; Owner: fmms
 --
 
 COMMENT ON COLUMN moduledescription.architectuallayers IS 'All possible architectual layers at the point in time when this moduledescription has been created.';
 
 
 --
--- Name: COLUMN moduledescription.activities; Type: COMMENT; Schema: descriptions; Owner: module
+-- Name: COLUMN moduledescription.activities; Type: COMMENT; Schema: descriptions; Owner: fmms
 --
 
 COMMENT ON COLUMN moduledescription.activities IS 'All possible activities at the point in time when this moduledescription has been created.';
 
 
 --
--- Name: COLUMN moduledescription.assessmenttypes; Type: COMMENT; Schema: descriptions; Owner: module
+-- Name: COLUMN moduledescription.assessmenttypes; Type: COMMENT; Schema: descriptions; Owner: fmms
 --
 
 COMMENT ON COLUMN moduledescription.assessmenttypes IS 'All possible assessment types at the point in time this moduledescription has been created.';
 
 
 --
--- Name: COLUMN moduledescription.gradings; Type: COMMENT; Schema: descriptions; Owner: module
+-- Name: COLUMN moduledescription.gradings; Type: COMMENT; Schema: descriptions; Owner: fmms
 --
 
 COMMENT ON COLUMN moduledescription.gradings IS 'All possible values for grading at the time this module description is created.';
 
 
 --
--- Name: moduledescription_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: module
+-- Name: moduledescription_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: fmms
 --
 
 CREATE SEQUENCE moduledescription_id_seq
@@ -403,17 +447,17 @@ CREATE SEQUENCE moduledescription_id_seq
     CACHE 1;
 
 
-ALTER TABLE moduledescription_id_seq OWNER TO module;
+ALTER TABLE moduledescription_id_seq OWNER TO fmms;
 
 --
--- Name: moduledescription_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: module
+-- Name: moduledescription_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: fmms
 --
 
 ALTER SEQUENCE moduledescription_id_seq OWNED BY moduledescription.id;
 
 
 --
--- Name: topic; Type: TABLE; Schema: descriptions; Owner: module
+-- Name: topic; Type: TABLE; Schema: descriptions; Owner: fmms
 --
 
 CREATE TABLE topic (
@@ -424,10 +468,10 @@ CREATE TABLE topic (
 );
 
 
-ALTER TABLE topic OWNER TO module;
+ALTER TABLE topic OWNER TO fmms;
 
 --
--- Name: topic_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: module
+-- Name: topic_id_seq; Type: SEQUENCE; Schema: descriptions; Owner: fmms
 --
 
 CREATE SEQUENCE topic_id_seq
@@ -438,32 +482,39 @@ CREATE SEQUENCE topic_id_seq
     CACHE 1;
 
 
-ALTER TABLE topic_id_seq OWNER TO module;
+ALTER TABLE topic_id_seq OWNER TO fmms;
 
 --
--- Name: topic_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: module
+-- Name: topic_id_seq; Type: SEQUENCE OWNED BY; Schema: descriptions; Owner: fmms
 --
 
 ALTER SEQUENCE topic_id_seq OWNED BY topic.id;
 
 
-SET search_path = study, pg_catalog;
+SET search_path = public, pg_catalog;
 
 --
--- Name: activity; Type: TABLE; Schema: study; Owner: module
+-- Name: activity; Type: TABLE; Schema: public; Owner: fmms
 --
 
 CREATE TABLE activity (
     id integer NOT NULL,
-    name character varying(50) NOT NULL,
+    name text,
     description text
 );
 
 
-ALTER TABLE activity OWNER TO module;
+ALTER TABLE activity OWNER TO fmms;
 
 --
--- Name: activity_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: TABLE activity; Type: COMMENT; Schema: public; Owner: fmms
+--
+
+COMMENT ON TABLE activity IS 'HBO-I activiteiten van de kwalificatie kubus';
+
+
+--
+-- Name: activity_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
 --
 
 CREATE SEQUENCE activity_id_seq
@@ -474,30 +525,30 @@ CREATE SEQUENCE activity_id_seq
     CACHE 1;
 
 
-ALTER TABLE activity_id_seq OWNER TO module;
+ALTER TABLE activity_id_seq OWNER TO fmms;
 
 --
--- Name: activity_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: activity_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
 --
 
 ALTER SEQUENCE activity_id_seq OWNED BY activity.id;
 
 
 --
--- Name: architecturallayer; Type: TABLE; Schema: study; Owner: module
+-- Name: architectural_layer; Type: TABLE; Schema: public; Owner: fmms
 --
 
-CREATE TABLE architecturallayer (
+CREATE TABLE architectural_layer (
     id integer NOT NULL,
-    name character varying(50) NOT NULL,
+    name text,
     description text
 );
 
 
-ALTER TABLE architecturallayer OWNER TO module;
+ALTER TABLE architectural_layer OWNER TO fmms;
 
 --
--- Name: architectural_layer_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: architectural_layer_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
 --
 
 CREATE SEQUENCE architectural_layer_id_seq
@@ -508,17 +559,622 @@ CREATE SEQUENCE architectural_layer_id_seq
     CACHE 1;
 
 
-ALTER TABLE architectural_layer_id_seq OWNER TO module;
+ALTER TABLE architectural_layer_id_seq OWNER TO fmms;
 
 --
--- Name: architectural_layer_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: architectural_layer_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE architectural_layer_id_seq OWNED BY architectural_layer.id;
+
+
+--
+-- Name: performance_criterium; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE performance_criterium (
+    id integer NOT NULL,
+    assessment_dimension_id integer,
+    sequenceno integer,
+    description text
+);
+
+
+ALTER TABLE performance_criterium OWNER TO fmms;
+
+--
+-- Name: assessment_criteria_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE assessment_criteria_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE assessment_criteria_id_seq OWNER TO fmms;
+
+--
+-- Name: assessment_criteria_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE assessment_criteria_id_seq OWNED BY performance_criterium.id;
+
+
+--
+-- Name: assessment_dimension; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE assessment_dimension (
+    id integer NOT NULL,
+    learning_goal_id integer,
+    sequenceno integer,
+    description text,
+    CONSTRAINT learning_goal_id_nn CHECK ((learning_goal_id IS NOT NULL))
+);
+
+
+ALTER TABLE assessment_dimension OWNER TO fmms;
+
+--
+-- Name: assessment_dimension_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE assessment_dimension_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE assessment_dimension_id_seq OWNER TO fmms;
+
+--
+-- Name: assessment_dimension_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE assessment_dimension_id_seq OWNED BY assessment_dimension.id;
+
+
+--
+-- Name: curriculum; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE curriculum (
+    id integer NOT NULL,
+    name text,
+    description text,
+    start_cohort text
+);
+
+
+ALTER TABLE curriculum OWNER TO fmms;
+
+--
+-- Name: curriculum_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE curriculum_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE curriculum_id_seq OWNER TO fmms;
+
+--
+-- Name: curriculum_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE curriculum_id_seq OWNED BY curriculum.id;
+
+
+--
+-- Name: learning_goal; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE learning_goal (
+    id integer NOT NULL,
+    module_id integer,
+    description text,
+    sequenceno integer,
+    CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL))
+);
+
+
+ALTER TABLE learning_goal OWNER TO fmms;
+
+--
+-- Name: learning_goal_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE learning_goal_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE learning_goal_id_seq OWNER TO fmms;
+
+--
+-- Name: learning_goal_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE learning_goal_id_seq OWNED BY learning_goal.id;
+
+
+--
+-- Name: learning_goal_qualification; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE learning_goal_qualification (
+    id integer NOT NULL,
+    learning_goal_id integer,
+    qualification_id integer
+);
+
+
+ALTER TABLE learning_goal_qualification OWNER TO fmms;
+
+--
+-- Name: learning_goal_qualification_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE learning_goal_qualification_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE learning_goal_qualification_id_seq OWNER TO fmms;
+
+--
+-- Name: learning_goal_qualification_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE learning_goal_qualification_id_seq OWNED BY learning_goal_qualification.id;
+
+
+--
+-- Name: lecturer; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE lecturer (
+    id integer NOT NULL,
+    code text,
+    first_name text,
+    last_name text,
+    pcn integer
+);
+
+
+ALTER TABLE lecturer OWNER TO fmms;
+
+--
+-- Name: lecturer_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE lecturer_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE lecturer_id_seq OWNER TO fmms;
+
+--
+-- Name: lecturer_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE lecturer_id_seq OWNED BY lecturer.id;
+
+
+--
+-- Name: level_of_skill; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE level_of_skill (
+    id integer NOT NULL,
+    level integer,
+    autonomy text,
+    behaviour text,
+    context text
+);
+
+
+ALTER TABLE level_of_skill OWNER TO fmms;
+
+--
+-- Name: level_of_skill_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE level_of_skill_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE level_of_skill_id_seq OWNER TO fmms;
+
+--
+-- Name: level_of_skill_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE level_of_skill_id_seq OWNED BY level_of_skill.id;
+
+
+--
+-- Name: module; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE module (
+    id integer NOT NULL,
+    code text,
+    name text,
+    credits integer,
+    previous_revision integer,
+    release_date date,
+    released_by integer,
+    release_notes text,
+    creation_date date,
+    created_by integer
+);
+
+
+ALTER TABLE module OWNER TO fmms;
+
+--
+-- Name: module_assessment; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE module_assessment (
+    id integer NOT NULL,
+    code text,
+    description text,
+    percentage numeric(3,2),
+    minimum_grade numeric(2,1),
+    remarks text,
+    module_id integer,
+    CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL))
+);
+
+
+ALTER TABLE module_assessment OWNER TO fmms;
+
+--
+-- Name: module_assessment_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE module_assessment_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE module_assessment_id_seq OWNER TO fmms;
+
+--
+-- Name: module_assessment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE module_assessment_id_seq OWNED BY module_assessment.id;
+
+
+--
+-- Name: module_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE module_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE module_id_seq OWNER TO fmms;
+
+--
+-- Name: module_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE module_id_seq OWNED BY module.id;
+
+
+--
+-- Name: module_predecessors; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE module_predecessors (
+    id integer NOT NULL,
+    module_id integer,
+    module_id_predecessor integer,
+    CONSTRAINT ids_not_null CHECK (((module_id IS NOT NULL) AND (module_id_predecessor IS NOT NULL)))
+);
+
+
+ALTER TABLE module_predecessors OWNER TO fmms;
+
+--
+-- Name: module_predecessors_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE module_predecessors_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE module_predecessors_id_seq OWNER TO fmms;
+
+--
+-- Name: module_predecessors_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE module_predecessors_id_seq OWNED BY module_predecessors.id;
+
+
+--
+-- Name: module_profile; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE module_profile (
+    id integer NOT NULL,
+    module_id integer,
+    profile_id integer,
+    semester integer
+);
+
+
+ALTER TABLE module_profile OWNER TO fmms;
+
+--
+-- Name: module_profile_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE module_profile_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE module_profile_id_seq OWNER TO fmms;
+
+--
+-- Name: module_profile_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE module_profile_id_seq OWNED BY module_profile.id;
+
+
+--
+-- Name: professional_task; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE professional_task (
+    id integer NOT NULL,
+    qualification_id integer,
+    description text
+);
+
+
+ALTER TABLE professional_task OWNER TO fmms;
+
+--
+-- Name: professional_task_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE professional_task_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE professional_task_id_seq OWNER TO fmms;
+
+--
+-- Name: professional_task_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE professional_task_id_seq OWNED BY professional_task.id;
+
+
+--
+-- Name: profile; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE profile (
+    id integer NOT NULL,
+    curriculum_id integer,
+    study_programme_id integer
+);
+
+
+ALTER TABLE profile OWNER TO fmms;
+
+--
+-- Name: profile_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE profile_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE profile_id_seq OWNER TO fmms;
+
+--
+-- Name: profile_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE profile_id_seq OWNED BY profile.id;
+
+
+--
+-- Name: qualification; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE qualification (
+    id integer NOT NULL,
+    architectural_layer_id integer,
+    activity_id integer,
+    level_of_skill_id integer
+);
+
+
+ALTER TABLE qualification OWNER TO fmms;
+
+--
+-- Name: qualification_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE qualification_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE qualification_id_seq OWNER TO fmms;
+
+--
+-- Name: qualification_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE qualification_id_seq OWNED BY qualification.id;
+
+
+--
+-- Name: study_programme; Type: TABLE; Schema: public; Owner: fmms
+--
+
+CREATE TABLE study_programme (
+    id integer NOT NULL,
+    programme_id text,
+    programme_name text
+);
+
+
+ALTER TABLE study_programme OWNER TO fmms;
+
+--
+-- Name: study_programme_id_seq; Type: SEQUENCE; Schema: public; Owner: fmms
+--
+
+CREATE SEQUENCE study_programme_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE study_programme_id_seq OWNER TO fmms;
+
+--
+-- Name: study_programme_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: fmms
+--
+
+ALTER SEQUENCE study_programme_id_seq OWNED BY study_programme.id;
+
+
+SET search_path = study, pg_catalog;
+
+--
+-- Name: activity; Type: TABLE; Schema: study; Owner: fmms
+--
+
+CREATE TABLE activity (
+    id integer NOT NULL,
+    name character varying(50) NOT NULL,
+    description text
+);
+
+
+ALTER TABLE activity OWNER TO fmms;
+
+--
+-- Name: activity_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
+--
+
+CREATE SEQUENCE activity_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE activity_id_seq OWNER TO fmms;
+
+--
+-- Name: activity_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
+--
+
+ALTER SEQUENCE activity_id_seq OWNED BY activity.id;
+
+
+--
+-- Name: architecturallayer; Type: TABLE; Schema: study; Owner: fmms
+--
+
+CREATE TABLE architecturallayer (
+    id integer NOT NULL,
+    name character varying(50) NOT NULL,
+    description text
+);
+
+
+ALTER TABLE architecturallayer OWNER TO fmms;
+
+--
+-- Name: architectural_layer_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
+--
+
+CREATE SEQUENCE architectural_layer_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE architectural_layer_id_seq OWNER TO fmms;
+
+--
+-- Name: architectural_layer_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE architectural_layer_id_seq OWNED BY architecturallayer.id;
 
 
 --
--- Name: moduleassessment; Type: TABLE; Schema: study; Owner: module
+-- Name: moduleassessment; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE moduleassessment (
@@ -534,10 +1190,10 @@ CREATE TABLE moduleassessment (
 );
 
 
-ALTER TABLE moduleassessment OWNER TO module;
+ALTER TABLE moduleassessment OWNER TO fmms;
 
 --
--- Name: assessment_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: assessment_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE assessment_id_seq
@@ -548,17 +1204,17 @@ CREATE SEQUENCE assessment_id_seq
     CACHE 1;
 
 
-ALTER TABLE assessment_id_seq OWNER TO module;
+ALTER TABLE assessment_id_seq OWNER TO fmms;
 
 --
--- Name: assessment_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: assessment_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE assessment_id_seq OWNED BY moduleassessment.id;
 
 
 --
--- Name: moduleasssementtype; Type: TABLE; Schema: study; Owner: module
+-- Name: moduleasssementtype; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE moduleasssementtype (
@@ -567,10 +1223,10 @@ CREATE TABLE moduleasssementtype (
 );
 
 
-ALTER TABLE moduleasssementtype OWNER TO module;
+ALTER TABLE moduleasssementtype OWNER TO fmms;
 
 --
--- Name: asssementtype_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: asssementtype_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE asssementtype_id_seq
@@ -581,17 +1237,17 @@ CREATE SEQUENCE asssementtype_id_seq
     CACHE 1;
 
 
-ALTER TABLE asssementtype_id_seq OWNER TO module;
+ALTER TABLE asssementtype_id_seq OWNER TO fmms;
 
 --
--- Name: asssementtype_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: asssementtype_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE asssementtype_id_seq OWNED BY moduleasssementtype.id;
 
 
 --
--- Name: curriculum; Type: TABLE; Schema: study; Owner: module
+-- Name: curriculum; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE curriculum (
@@ -604,10 +1260,10 @@ CREATE TABLE curriculum (
 );
 
 
-ALTER TABLE curriculum OWNER TO module;
+ALTER TABLE curriculum OWNER TO fmms;
 
 --
--- Name: module; Type: TABLE; Schema: study; Owner: module
+-- Name: module; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE module (
@@ -626,10 +1282,10 @@ CREATE TABLE module (
 );
 
 
-ALTER TABLE module OWNER TO module;
+ALTER TABLE module OWNER TO fmms;
 
 --
--- Name: module_profile; Type: TABLE; Schema: study; Owner: module
+-- Name: module_profile; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE module_profile (
@@ -641,10 +1297,10 @@ CREATE TABLE module_profile (
 );
 
 
-ALTER TABLE module_profile OWNER TO module;
+ALTER TABLE module_profile OWNER TO fmms;
 
 --
--- Name: profile; Type: TABLE; Schema: study; Owner: module
+-- Name: profile; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE profile (
@@ -654,10 +1310,10 @@ CREATE TABLE profile (
 );
 
 
-ALTER TABLE profile OWNER TO module;
+ALTER TABLE profile OWNER TO fmms;
 
 --
--- Name: studyprogramme; Type: TABLE; Schema: study; Owner: module
+-- Name: studyprogramme; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE studyprogramme (
@@ -667,10 +1323,10 @@ CREATE TABLE studyprogramme (
 );
 
 
-ALTER TABLE studyprogramme OWNER TO module;
+ALTER TABLE studyprogramme OWNER TO fmms;
 
 --
--- Name: curriculum_overview; Type: VIEW; Schema: study; Owner: module
+-- Name: curriculum_overview; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW curriculum_overview AS
@@ -691,10 +1347,10 @@ CREATE VIEW curriculum_overview AS
   ORDER BY p.id, mp.semester, m.code;
 
 
-ALTER TABLE curriculum_overview OWNER TO module;
+ALTER TABLE curriculum_overview OWNER TO fmms;
 
 --
--- Name: curriculum_differentiation; Type: VIEW; Schema: study; Owner: module
+-- Name: curriculum_differentiation; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW curriculum_differentiation AS
@@ -732,10 +1388,10 @@ UNION
   ORDER BY 2, 5, 3;
 
 
-ALTER TABLE curriculum_differentiation OWNER TO module;
+ALTER TABLE curriculum_differentiation OWNER TO fmms;
 
 --
--- Name: learninggoal; Type: TABLE; Schema: study; Owner: module
+-- Name: learninggoal; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE learninggoal (
@@ -751,10 +1407,10 @@ CREATE TABLE learninggoal (
 );
 
 
-ALTER TABLE learninggoal OWNER TO module;
+ALTER TABLE learninggoal OWNER TO fmms;
 
 --
--- Name: learninggoal_qualification; Type: TABLE; Schema: study; Owner: module
+-- Name: learninggoal_qualification; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE learninggoal_qualification (
@@ -764,10 +1420,10 @@ CREATE TABLE learninggoal_qualification (
 );
 
 
-ALTER TABLE learninggoal_qualification OWNER TO module;
+ALTER TABLE learninggoal_qualification OWNER TO fmms;
 
 --
--- Name: levelofskill; Type: TABLE; Schema: study; Owner: module
+-- Name: levelofskill; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE levelofskill (
@@ -780,10 +1436,10 @@ CREATE TABLE levelofskill (
 );
 
 
-ALTER TABLE levelofskill OWNER TO module;
+ALTER TABLE levelofskill OWNER TO fmms;
 
 --
--- Name: qualification; Type: TABLE; Schema: study; Owner: module
+-- Name: qualification; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE qualification (
@@ -794,17 +1450,17 @@ CREATE TABLE qualification (
 );
 
 
-ALTER TABLE qualification OWNER TO module;
+ALTER TABLE qualification OWNER TO fmms;
 
 --
--- Name: TABLE qualification; Type: COMMENT; Schema: study; Owner: module
+-- Name: TABLE qualification; Type: COMMENT; Schema: study; Owner: fmms
 --
 
 COMMENT ON TABLE qualification IS 'Contains all possible combinations of architectural layer, activity and level of skill';
 
 
 --
--- Name: clots_self_evaluation; Type: VIEW; Schema: study; Owner: module
+-- Name: clots_self_evaluation; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW clots_self_evaluation AS
@@ -832,10 +1488,10 @@ CREATE VIEW clots_self_evaluation AS
   ORDER BY co.name, co.study_programme, a.id, al.id, l.level, co.semester, m.code, lg.description, m.credits;
 
 
-ALTER TABLE clots_self_evaluation OWNER TO module;
+ALTER TABLE clots_self_evaluation OWNER TO fmms;
 
 --
--- Name: curriculum_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: curriculum_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE curriculum_id_seq
@@ -846,17 +1502,17 @@ CREATE SEQUENCE curriculum_id_seq
     CACHE 1;
 
 
-ALTER TABLE curriculum_id_seq OWNER TO module;
+ALTER TABLE curriculum_id_seq OWNER TO fmms;
 
 --
--- Name: curriculum_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: curriculum_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE curriculum_id_seq OWNED BY curriculum.id;
 
 
 --
--- Name: department; Type: TABLE; Schema: study; Owner: module
+-- Name: department; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE department (
@@ -865,10 +1521,10 @@ CREATE TABLE department (
 );
 
 
-ALTER TABLE department OWNER TO module;
+ALTER TABLE department OWNER TO fmms;
 
 --
--- Name: department_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: department_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE department_id_seq
@@ -879,17 +1535,17 @@ CREATE SEQUENCE department_id_seq
     CACHE 1;
 
 
-ALTER TABLE department_id_seq OWNER TO module;
+ALTER TABLE department_id_seq OWNER TO fmms;
 
 --
--- Name: department_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: department_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE department_id_seq OWNED BY department.id;
 
 
 --
--- Name: employee; Type: TABLE; Schema: study; Owner: module
+-- Name: employee; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE employee (
@@ -903,10 +1559,10 @@ CREATE TABLE employee (
 );
 
 
-ALTER TABLE employee OWNER TO module;
+ALTER TABLE employee OWNER TO fmms;
 
 --
--- Name: employee_department; Type: TABLE; Schema: study; Owner: module
+-- Name: employee_department; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE employee_department (
@@ -917,10 +1573,10 @@ CREATE TABLE employee_department (
 );
 
 
-ALTER TABLE employee_department OWNER TO module;
+ALTER TABLE employee_department OWNER TO fmms;
 
 --
--- Name: employee_department_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: employee_department_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE employee_department_id_seq
@@ -931,17 +1587,17 @@ CREATE SEQUENCE employee_department_id_seq
     CACHE 1;
 
 
-ALTER TABLE employee_department_id_seq OWNER TO module;
+ALTER TABLE employee_department_id_seq OWNER TO fmms;
 
 --
--- Name: employee_department_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: employee_department_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE employee_department_id_seq OWNED BY employee_department.id;
 
 
 --
--- Name: employee_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: employee_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE employee_id_seq
@@ -952,17 +1608,17 @@ CREATE SEQUENCE employee_id_seq
     CACHE 1;
 
 
-ALTER TABLE employee_id_seq OWNER TO module;
+ALTER TABLE employee_id_seq OWNER TO fmms;
 
 --
--- Name: employee_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: employee_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE employee_id_seq OWNED BY employee.id;
 
 
 --
--- Name: professionaltask; Type: TABLE; Schema: study; Owner: module
+-- Name: professionaltask; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE professionaltask (
@@ -972,10 +1628,10 @@ CREATE TABLE professionaltask (
 );
 
 
-ALTER TABLE professionaltask OWNER TO module;
+ALTER TABLE professionaltask OWNER TO fmms;
 
 --
--- Name: hboi_matrix; Type: VIEW; Schema: study; Owner: module
+-- Name: hboi_matrix; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW hboi_matrix AS
@@ -992,10 +1648,10 @@ CREATE VIEW hboi_matrix AS
   WHERE ((a.id = q.activity_id) AND (al.id = q.architecturallayer_id) AND (los.id = q.levelofskill_id) AND (q.id = pt.qualification_id));
 
 
-ALTER TABLE hboi_matrix OWNER TO module;
+ALTER TABLE hboi_matrix OWNER TO fmms;
 
 --
--- Name: learning_goal_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: learning_goal_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE learning_goal_id_seq
@@ -1006,17 +1662,17 @@ CREATE SEQUENCE learning_goal_id_seq
     CACHE 1;
 
 
-ALTER TABLE learning_goal_id_seq OWNER TO module;
+ALTER TABLE learning_goal_id_seq OWNER TO fmms;
 
 --
--- Name: learning_goal_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: learning_goal_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE learning_goal_id_seq OWNED BY learninggoal.id;
 
 
 --
--- Name: learning_goal_qualification_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: learning_goal_qualification_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE learning_goal_qualification_id_seq
@@ -1027,17 +1683,17 @@ CREATE SEQUENCE learning_goal_qualification_id_seq
     CACHE 1;
 
 
-ALTER TABLE learning_goal_qualification_id_seq OWNER TO module;
+ALTER TABLE learning_goal_qualification_id_seq OWNER TO fmms;
 
 --
--- Name: learning_goal_qualification_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: learning_goal_qualification_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE learning_goal_qualification_id_seq OWNED BY learninggoal_qualification.id;
 
 
 --
--- Name: level_of_skill_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: level_of_skill_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE level_of_skill_id_seq
@@ -1048,17 +1704,17 @@ CREATE SEQUENCE level_of_skill_id_seq
     CACHE 1;
 
 
-ALTER TABLE level_of_skill_id_seq OWNER TO module;
+ALTER TABLE level_of_skill_id_seq OWNER TO fmms;
 
 --
--- Name: level_of_skill_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: level_of_skill_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE level_of_skill_id_seq OWNED BY levelofskill.id;
 
 
 --
--- Name: module_employee; Type: TABLE; Schema: study; Owner: module
+-- Name: module_employee; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE module_employee (
@@ -1068,10 +1724,10 @@ CREATE TABLE module_employee (
 );
 
 
-ALTER TABLE module_employee OWNER TO module;
+ALTER TABLE module_employee OWNER TO fmms;
 
 --
--- Name: module_employee_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: module_employee_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE module_employee_id_seq
@@ -1082,17 +1738,17 @@ CREATE SEQUENCE module_employee_id_seq
     CACHE 1;
 
 
-ALTER TABLE module_employee_id_seq OWNER TO module;
+ALTER TABLE module_employee_id_seq OWNER TO fmms;
 
 --
--- Name: module_employee_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: module_employee_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE module_employee_id_seq OWNED BY module_employee.id;
 
 
 --
--- Name: module_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: module_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE module_id_seq
@@ -1103,17 +1759,17 @@ CREATE SEQUENCE module_id_seq
     CACHE 1;
 
 
-ALTER TABLE module_id_seq OWNER TO module;
+ALTER TABLE module_id_seq OWNER TO fmms;
 
 --
--- Name: module_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: module_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE module_id_seq OWNED BY module.id;
 
 
 --
--- Name: module_max_qualification; Type: VIEW; Schema: study; Owner: module
+-- Name: module_max_qualification; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW module_max_qualification AS
@@ -1135,10 +1791,10 @@ CREATE VIEW module_max_qualification AS
   ORDER BY m.code, al.id, a.id;
 
 
-ALTER TABLE module_max_qualification OWNER TO module;
+ALTER TABLE module_max_qualification OWNER TO fmms;
 
 --
--- Name: moduledependency; Type: TABLE; Schema: study; Owner: module
+-- Name: moduledependency; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE moduledependency (
@@ -1153,24 +1809,24 @@ CREATE TABLE moduledependency (
 );
 
 
-ALTER TABLE moduledependency OWNER TO module;
+ALTER TABLE moduledependency OWNER TO fmms;
 
 --
--- Name: COLUMN moduledependency.module_id; Type: COMMENT; Schema: study; Owner: module
+-- Name: COLUMN moduledependency.module_id; Type: COMMENT; Schema: study; Owner: fmms
 --
 
 COMMENT ON COLUMN moduledependency.module_id IS 'The module we are currently talking about.';
 
 
 --
--- Name: COLUMN moduledependency.dependency_module_id; Type: COMMENT; Schema: study; Owner: module
+-- Name: COLUMN moduledependency.dependency_module_id; Type: COMMENT; Schema: study; Owner: fmms
 --
 
 COMMENT ON COLUMN moduledependency.dependency_module_id IS 'A module which has to be passed prior to the module in "module id".';
 
 
 --
--- Name: module_predecessors_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: module_predecessors_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE module_predecessors_id_seq
@@ -1181,17 +1837,17 @@ CREATE SEQUENCE module_predecessors_id_seq
     CACHE 1;
 
 
-ALTER TABLE module_predecessors_id_seq OWNER TO module;
+ALTER TABLE module_predecessors_id_seq OWNER TO fmms;
 
 --
--- Name: module_predecessors_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: module_predecessors_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE module_predecessors_id_seq OWNED BY moduledependency.id;
 
 
 --
--- Name: module_profile_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: module_profile_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE module_profile_id_seq
@@ -1202,17 +1858,17 @@ CREATE SEQUENCE module_profile_id_seq
     CACHE 1;
 
 
-ALTER TABLE module_profile_id_seq OWNER TO module;
+ALTER TABLE module_profile_id_seq OWNER TO fmms;
 
 --
--- Name: module_profile_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: module_profile_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE module_profile_id_seq OWNED BY module_profile.id;
 
 
 --
--- Name: moduletopic; Type: TABLE; Schema: study; Owner: module
+-- Name: moduletopic; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE moduletopic (
@@ -1225,10 +1881,10 @@ CREATE TABLE moduletopic (
 );
 
 
-ALTER TABLE moduletopic OWNER TO module;
+ALTER TABLE moduletopic OWNER TO fmms;
 
 --
--- Name: module_topics_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: module_topics_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE module_topics_id_seq
@@ -1239,17 +1895,17 @@ CREATE SEQUENCE module_topics_id_seq
     CACHE 1;
 
 
-ALTER TABLE module_topics_id_seq OWNER TO module;
+ALTER TABLE module_topics_id_seq OWNER TO fmms;
 
 --
--- Name: module_topics_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: module_topics_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE module_topics_id_seq OWNED BY moduletopic.id;
 
 
 --
--- Name: moduleassessment_learninggoal; Type: TABLE; Schema: study; Owner: module
+-- Name: moduleassessment_learninggoal; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE moduleassessment_learninggoal (
@@ -1259,10 +1915,10 @@ CREATE TABLE moduleassessment_learninggoal (
 );
 
 
-ALTER TABLE moduleassessment_learninggoal OWNER TO module;
+ALTER TABLE moduleassessment_learninggoal OWNER TO fmms;
 
 --
--- Name: moduleassessment_learninggoal_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: moduleassessment_learninggoal_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE moduleassessment_learninggoal_id_seq
@@ -1273,17 +1929,17 @@ CREATE SEQUENCE moduleassessment_learninggoal_id_seq
     CACHE 1;
 
 
-ALTER TABLE moduleassessment_learninggoal_id_seq OWNER TO module;
+ALTER TABLE moduleassessment_learninggoal_id_seq OWNER TO fmms;
 
 --
--- Name: moduleassessment_learninggoal_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: moduleassessment_learninggoal_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE moduleassessment_learninggoal_id_seq OWNED BY moduleassessment_learninggoal.id;
 
 
 --
--- Name: moduleassessment_moduleassessmenttype; Type: TABLE; Schema: study; Owner: module
+-- Name: moduleassessment_moduleassessmenttype; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE moduleassessment_moduleassessmenttype (
@@ -1293,10 +1949,10 @@ CREATE TABLE moduleassessment_moduleassessmenttype (
 );
 
 
-ALTER TABLE moduleassessment_moduleassessmenttype OWNER TO module;
+ALTER TABLE moduleassessment_moduleassessmenttype OWNER TO fmms;
 
 --
--- Name: moduleassessment_moduleassessmenttype_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: moduleassessment_moduleassessmenttype_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE moduleassessment_moduleassessmenttype_id_seq
@@ -1307,17 +1963,17 @@ CREATE SEQUENCE moduleassessment_moduleassessmenttype_id_seq
     CACHE 1;
 
 
-ALTER TABLE moduleassessment_moduleassessmenttype_id_seq OWNER TO module;
+ALTER TABLE moduleassessment_moduleassessmenttype_id_seq OWNER TO fmms;
 
 --
--- Name: moduleassessment_moduleassessmenttype_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: moduleassessment_moduleassessmenttype_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE moduleassessment_moduleassessmenttype_id_seq OWNED BY moduleassessment_moduleassessmenttype.id;
 
 
 --
--- Name: moduledescription; Type: TABLE; Schema: study; Owner: module
+-- Name: moduledescription; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE moduledescription (
@@ -1331,10 +1987,10 @@ CREATE TABLE moduledescription (
 );
 
 
-ALTER TABLE moduledescription OWNER TO module;
+ALTER TABLE moduledescription OWNER TO fmms;
 
 --
--- Name: moduledescription_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: moduledescription_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE moduledescription_id_seq
@@ -1345,17 +2001,17 @@ CREATE SEQUENCE moduledescription_id_seq
     CACHE 1;
 
 
-ALTER TABLE moduledescription_id_seq OWNER TO module;
+ALTER TABLE moduledescription_id_seq OWNER TO fmms;
 
 --
--- Name: moduledescription_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: moduledescription_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE moduledescription_id_seq OWNED BY moduledescription.id;
 
 
 --
--- Name: professional_task_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: professional_task_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE professional_task_id_seq
@@ -1366,17 +2022,17 @@ CREATE SEQUENCE professional_task_id_seq
     CACHE 1;
 
 
-ALTER TABLE professional_task_id_seq OWNER TO module;
+ALTER TABLE professional_task_id_seq OWNER TO fmms;
 
 --
--- Name: professional_task_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: professional_task_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE professional_task_id_seq OWNED BY professionaltask.id;
 
 
 --
--- Name: profile_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: profile_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE profile_id_seq
@@ -1387,17 +2043,17 @@ CREATE SEQUENCE profile_id_seq
     CACHE 1;
 
 
-ALTER TABLE profile_id_seq OWNER TO module;
+ALTER TABLE profile_id_seq OWNER TO fmms;
 
 --
--- Name: profile_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: profile_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE profile_id_seq OWNED BY profile.id;
 
 
 --
--- Name: profile_qualification; Type: TABLE; Schema: study; Owner: module
+-- Name: profile_qualification; Type: TABLE; Schema: study; Owner: fmms
 --
 
 CREATE TABLE profile_qualification (
@@ -1407,10 +2063,10 @@ CREATE TABLE profile_qualification (
 );
 
 
-ALTER TABLE profile_qualification OWNER TO module;
+ALTER TABLE profile_qualification OWNER TO fmms;
 
 --
--- Name: profile_qualification_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: profile_qualification_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE profile_qualification_id_seq
@@ -1421,17 +2077,17 @@ CREATE SEQUENCE profile_qualification_id_seq
     CACHE 1;
 
 
-ALTER TABLE profile_qualification_id_seq OWNER TO module;
+ALTER TABLE profile_qualification_id_seq OWNER TO fmms;
 
 --
--- Name: profile_qualification_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: profile_qualification_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE profile_qualification_id_seq OWNED BY profile_qualification.id;
 
 
 --
--- Name: qualification_description; Type: VIEW; Schema: study; Owner: module
+-- Name: qualification_description; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW qualification_description AS
@@ -1446,10 +2102,10 @@ CREATE VIEW qualification_description AS
   WHERE ((q.architecturallayer_id = al.id) AND (q.activity_id = a.id) AND (q.levelofskill_id = l.id));
 
 
-ALTER TABLE qualification_description OWNER TO module;
+ALTER TABLE qualification_description OWNER TO fmms;
 
 --
--- Name: qualification_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: qualification_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE qualification_id_seq
@@ -1460,17 +2116,17 @@ CREATE SEQUENCE qualification_id_seq
     CACHE 1;
 
 
-ALTER TABLE qualification_id_seq OWNER TO module;
+ALTER TABLE qualification_id_seq OWNER TO fmms;
 
 --
--- Name: qualification_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: qualification_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE qualification_id_seq OWNED BY qualification.id;
 
 
 --
--- Name: qualification_match_learning_goals; Type: VIEW; Schema: study; Owner: module
+-- Name: qualification_match_learning_goals; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW qualification_match_learning_goals AS
@@ -1492,10 +2148,10 @@ CREATE VIEW qualification_match_learning_goals AS
   ORDER BY al.id, a.id, l.level, lg.description, m.code;
 
 
-ALTER TABLE qualification_match_learning_goals OWNER TO module;
+ALTER TABLE qualification_match_learning_goals OWNER TO fmms;
 
 --
--- Name: qualification_match_modules; Type: VIEW; Schema: study; Owner: module
+-- Name: qualification_match_modules; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW qualification_match_modules AS
@@ -1517,10 +2173,10 @@ CREATE VIEW qualification_match_modules AS
   ORDER BY al.id, a.id, l.level, m.code;
 
 
-ALTER TABLE qualification_match_modules OWNER TO module;
+ALTER TABLE qualification_match_modules OWNER TO fmms;
 
 --
--- Name: qualifications_after_module; Type: VIEW; Schema: study; Owner: module
+-- Name: qualifications_after_module; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW qualifications_after_module AS
@@ -1531,10 +2187,10 @@ CREATE VIEW qualifications_after_module AS
      JOIN qualification q ON ((lg2q.qualification_id = q.id)));
 
 
-ALTER TABLE qualifications_after_module OWNER TO module;
+ALTER TABLE qualifications_after_module OWNER TO fmms;
 
 --
--- Name: qualifications_after_semester; Type: VIEW; Schema: study; Owner: module
+-- Name: qualifications_after_semester; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW qualifications_after_semester AS
@@ -1588,10 +2244,10 @@ CREATE VIEW qualifications_after_semester AS
   ORDER BY c.name, sp.code, mp.semester, al.id;
 
 
-ALTER TABLE qualifications_after_semester OWNER TO module;
+ALTER TABLE qualifications_after_semester OWNER TO fmms;
 
 --
--- Name: qualifications_learning_goals; Type: VIEW; Schema: study; Owner: module
+-- Name: qualifications_learning_goals; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW qualifications_learning_goals AS
@@ -1606,10 +2262,10 @@ CREATE VIEW qualifications_learning_goals AS
   ORDER BY qd.q_id, qd.al_name, qd.a_name, qd.level, qml.description, qml.code;
 
 
-ALTER TABLE qualifications_learning_goals OWNER TO module;
+ALTER TABLE qualifications_learning_goals OWNER TO fmms;
 
 --
--- Name: qualifications_modules; Type: VIEW; Schema: study; Owner: module
+-- Name: qualifications_modules; Type: VIEW; Schema: study; Owner: fmms
 --
 
 CREATE VIEW qualifications_modules AS
@@ -1623,10 +2279,10 @@ CREATE VIEW qualifications_modules AS
   ORDER BY qd.q_id, qd.al_name, qd.a_name, qd.level, qmm.module_code;
 
 
-ALTER TABLE qualifications_modules OWNER TO module;
+ALTER TABLE qualifications_modules OWNER TO fmms;
 
 --
--- Name: study_programme_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+-- Name: study_programme_id_seq; Type: SEQUENCE; Schema: study; Owner: fmms
 --
 
 CREATE SEQUENCE study_programme_id_seq
@@ -1637,10 +2293,10 @@ CREATE SEQUENCE study_programme_id_seq
     CACHE 1;
 
 
-ALTER TABLE study_programme_id_seq OWNER TO module;
+ALTER TABLE study_programme_id_seq OWNER TO fmms;
 
 --
--- Name: study_programme_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+-- Name: study_programme_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: fmms
 --
 
 ALTER SEQUENCE study_programme_id_seq OWNED BY studyprogramme.id;
@@ -1649,7 +2305,7 @@ ALTER SEQUENCE study_programme_id_seq OWNED BY studyprogramme.id;
 SET search_path = users, pg_catalog;
 
 --
--- Name: accessright; Type: TABLE; Schema: users; Owner: module
+-- Name: accessright; Type: TABLE; Schema: users; Owner: fmms
 --
 
 CREATE TABLE accessright (
@@ -1661,10 +2317,10 @@ CREATE TABLE accessright (
 );
 
 
-ALTER TABLE accessright OWNER TO module;
+ALTER TABLE accessright OWNER TO fmms;
 
 --
--- Name: accessright_id_seq; Type: SEQUENCE; Schema: users; Owner: module
+-- Name: accessright_id_seq; Type: SEQUENCE; Schema: users; Owner: fmms
 --
 
 CREATE SEQUENCE accessright_id_seq
@@ -1675,17 +2331,17 @@ CREATE SEQUENCE accessright_id_seq
     CACHE 1;
 
 
-ALTER TABLE accessright_id_seq OWNER TO module;
+ALTER TABLE accessright_id_seq OWNER TO fmms;
 
 --
--- Name: accessright_id_seq; Type: SEQUENCE OWNED BY; Schema: users; Owner: module
+-- Name: accessright_id_seq; Type: SEQUENCE OWNED BY; Schema: users; Owner: fmms
 --
 
 ALTER SEQUENCE accessright_id_seq OWNED BY accessright.id;
 
 
 --
--- Name: role; Type: TABLE; Schema: users; Owner: module
+-- Name: role; Type: TABLE; Schema: users; Owner: fmms
 --
 
 CREATE TABLE role (
@@ -1694,10 +2350,10 @@ CREATE TABLE role (
 );
 
 
-ALTER TABLE role OWNER TO module;
+ALTER TABLE role OWNER TO fmms;
 
 --
--- Name: role_id_seq; Type: SEQUENCE; Schema: users; Owner: module
+-- Name: role_id_seq; Type: SEQUENCE; Schema: users; Owner: fmms
 --
 
 CREATE SEQUENCE role_id_seq
@@ -1708,17 +2364,17 @@ CREATE SEQUENCE role_id_seq
     CACHE 1;
 
 
-ALTER TABLE role_id_seq OWNER TO module;
+ALTER TABLE role_id_seq OWNER TO fmms;
 
 --
--- Name: role_id_seq; Type: SEQUENCE OWNED BY; Schema: users; Owner: module
+-- Name: role_id_seq; Type: SEQUENCE OWNED BY; Schema: users; Owner: fmms
 --
 
 ALTER SEQUENCE role_id_seq OWNED BY role.id;
 
 
 --
--- Name: user; Type: TABLE; Schema: users; Owner: module
+-- Name: user; Type: TABLE; Schema: users; Owner: fmms
 --
 
 CREATE TABLE "user" (
@@ -1730,10 +2386,10 @@ CREATE TABLE "user" (
 );
 
 
-ALTER TABLE "user" OWNER TO module;
+ALTER TABLE "user" OWNER TO fmms;
 
 --
--- Name: user_id_seq; Type: SEQUENCE; Schema: users; Owner: module
+-- Name: user_id_seq; Type: SEQUENCE; Schema: users; Owner: fmms
 --
 
 CREATE SEQUENCE user_id_seq
@@ -1744,17 +2400,17 @@ CREATE SEQUENCE user_id_seq
     CACHE 1;
 
 
-ALTER TABLE user_id_seq OWNER TO module;
+ALTER TABLE user_id_seq OWNER TO fmms;
 
 --
--- Name: user_id_seq; Type: SEQUENCE OWNED BY; Schema: users; Owner: module
+-- Name: user_id_seq; Type: SEQUENCE OWNED BY; Schema: users; Owner: fmms
 --
 
 ALTER SEQUENCE user_id_seq OWNED BY "user".id;
 
 
 --
--- Name: user_role; Type: TABLE; Schema: users; Owner: module
+-- Name: user_role; Type: TABLE; Schema: users; Owner: fmms
 --
 
 CREATE TABLE user_role (
@@ -1764,224 +2420,345 @@ CREATE TABLE user_role (
 );
 
 
-ALTER TABLE user_role OWNER TO module;
+ALTER TABLE user_role OWNER TO fmms;
 
 SET search_path = descriptions, pg_catalog;
 
 --
--- Name: author id; Type: DEFAULT; Schema: descriptions; Owner: module
+-- Name: author id; Type: DEFAULT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY author ALTER COLUMN id SET DEFAULT nextval('authors_id_seq'::regclass);
 
 
 --
--- Name: competence id; Type: DEFAULT; Schema: descriptions; Owner: module
+-- Name: competence id; Type: DEFAULT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY competence ALTER COLUMN id SET DEFAULT nextval('competence_id_seq'::regclass);
 
 
 --
--- Name: dependency id; Type: DEFAULT; Schema: descriptions; Owner: module
+-- Name: dependency id; Type: DEFAULT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY dependency ALTER COLUMN id SET DEFAULT nextval('dependency_id_seq'::regclass);
 
 
 --
--- Name: learninggoal id; Type: DEFAULT; Schema: descriptions; Owner: module
+-- Name: learninggoal id; Type: DEFAULT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY learninggoal ALTER COLUMN id SET DEFAULT nextval('learninggoal_id_seq'::regclass);
 
 
 --
--- Name: moduleassessment id; Type: DEFAULT; Schema: descriptions; Owner: module
+-- Name: moduleassessment id; Type: DEFAULT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY moduleassessment ALTER COLUMN id SET DEFAULT nextval('moduleassessment_id_seq'::regclass);
 
 
 --
--- Name: moduledescription id; Type: DEFAULT; Schema: descriptions; Owner: module
+-- Name: moduledescription id; Type: DEFAULT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY moduledescription ALTER COLUMN id SET DEFAULT nextval('moduledescription_id_seq'::regclass);
 
 
 --
--- Name: topic id; Type: DEFAULT; Schema: descriptions; Owner: module
+-- Name: topic id; Type: DEFAULT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY topic ALTER COLUMN id SET DEFAULT nextval('topic_id_seq'::regclass);
 
 
-SET search_path = study, pg_catalog;
+SET search_path = public, pg_catalog;
 
 --
--- Name: activity id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: activity id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY activity ALTER COLUMN id SET DEFAULT nextval('activity_id_seq'::regclass);
 
 
 --
--- Name: architecturallayer id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: architectural_layer id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY architecturallayer ALTER COLUMN id SET DEFAULT nextval('architectural_layer_id_seq'::regclass);
+ALTER TABLE ONLY architectural_layer ALTER COLUMN id SET DEFAULT nextval('architectural_layer_id_seq'::regclass);
 
 
 --
--- Name: curriculum id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: assessment_dimension id; Type: DEFAULT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY assessment_dimension ALTER COLUMN id SET DEFAULT nextval('assessment_dimension_id_seq'::regclass);
+
+
+--
+-- Name: curriculum id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY curriculum ALTER COLUMN id SET DEFAULT nextval('curriculum_id_seq'::regclass);
 
 
 --
--- Name: department id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: learning_goal id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY department ALTER COLUMN id SET DEFAULT nextval('department_id_seq'::regclass);
-
-
---
--- Name: employee id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY employee ALTER COLUMN id SET DEFAULT nextval('employee_id_seq'::regclass);
+ALTER TABLE ONLY learning_goal ALTER COLUMN id SET DEFAULT nextval('learning_goal_id_seq'::regclass);
 
 
 --
--- Name: employee_department id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: learning_goal_qualification id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY employee_department ALTER COLUMN id SET DEFAULT nextval('employee_department_id_seq'::regclass);
-
-
---
--- Name: learninggoal id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY learninggoal ALTER COLUMN id SET DEFAULT nextval('learning_goal_id_seq'::regclass);
+ALTER TABLE ONLY learning_goal_qualification ALTER COLUMN id SET DEFAULT nextval('learning_goal_qualification_id_seq'::regclass);
 
 
 --
--- Name: learninggoal_qualification id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: lecturer id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY learninggoal_qualification ALTER COLUMN id SET DEFAULT nextval('learning_goal_qualification_id_seq'::regclass);
-
-
---
--- Name: levelofskill id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY levelofskill ALTER COLUMN id SET DEFAULT nextval('level_of_skill_id_seq'::regclass);
+ALTER TABLE ONLY lecturer ALTER COLUMN id SET DEFAULT nextval('lecturer_id_seq'::regclass);
 
 
 --
--- Name: module id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: level_of_skill id; Type: DEFAULT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY level_of_skill ALTER COLUMN id SET DEFAULT nextval('level_of_skill_id_seq'::regclass);
+
+
+--
+-- Name: module id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY module ALTER COLUMN id SET DEFAULT nextval('module_id_seq'::regclass);
 
 
 --
--- Name: module_employee id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: module_assessment id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY module_employee ALTER COLUMN id SET DEFAULT nextval('module_employee_id_seq'::regclass);
+ALTER TABLE ONLY module_assessment ALTER COLUMN id SET DEFAULT nextval('module_assessment_id_seq'::regclass);
 
 
 --
--- Name: module_profile id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: module_predecessors id; Type: DEFAULT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY module_predecessors ALTER COLUMN id SET DEFAULT nextval('module_predecessors_id_seq'::regclass);
+
+
+--
+-- Name: module_profile id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY module_profile ALTER COLUMN id SET DEFAULT nextval('module_profile_id_seq'::regclass);
 
 
 --
--- Name: moduleassessment id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: performance_criterium id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY moduleassessment ALTER COLUMN id SET DEFAULT nextval('assessment_id_seq'::regclass);
-
-
---
--- Name: moduleassessment_learninggoal id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleassessment_learninggoal ALTER COLUMN id SET DEFAULT nextval('moduleassessment_learninggoal_id_seq'::regclass);
+ALTER TABLE ONLY performance_criterium ALTER COLUMN id SET DEFAULT nextval('assessment_criteria_id_seq'::regclass);
 
 
 --
--- Name: moduleassessment_moduleassessmenttype id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: professional_task id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY moduleassessment_moduleassessmenttype ALTER COLUMN id SET DEFAULT nextval('moduleassessment_moduleassessmenttype_id_seq'::regclass);
-
-
---
--- Name: moduleasssementtype id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleasssementtype ALTER COLUMN id SET DEFAULT nextval('asssementtype_id_seq'::regclass);
+ALTER TABLE ONLY professional_task ALTER COLUMN id SET DEFAULT nextval('professional_task_id_seq'::regclass);
 
 
 --
--- Name: moduledependency id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduledependency ALTER COLUMN id SET DEFAULT nextval('module_predecessors_id_seq'::regclass);
-
-
---
--- Name: moduledescription id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduledescription ALTER COLUMN id SET DEFAULT nextval('moduledescription_id_seq'::regclass);
-
-
---
--- Name: moduletopic id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduletopic ALTER COLUMN id SET DEFAULT nextval('module_topics_id_seq'::regclass);
-
-
---
--- Name: professionaltask id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY professionaltask ALTER COLUMN id SET DEFAULT nextval('professional_task_id_seq'::regclass);
-
-
---
--- Name: profile id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: profile id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY profile ALTER COLUMN id SET DEFAULT nextval('profile_id_seq'::regclass);
 
 
 --
--- Name: profile_qualification id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY profile_qualification ALTER COLUMN id SET DEFAULT nextval('profile_qualification_id_seq'::regclass);
-
-
---
--- Name: qualification id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: qualification id; Type: DEFAULT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY qualification ALTER COLUMN id SET DEFAULT nextval('qualification_id_seq'::regclass);
 
 
 --
--- Name: studyprogramme id; Type: DEFAULT; Schema: study; Owner: module
+-- Name: study_programme id; Type: DEFAULT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY study_programme ALTER COLUMN id SET DEFAULT nextval('study_programme_id_seq'::regclass);
+
+
+SET search_path = study, pg_catalog;
+
+--
+-- Name: activity id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY activity ALTER COLUMN id SET DEFAULT nextval('activity_id_seq'::regclass);
+
+
+--
+-- Name: architecturallayer id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY architecturallayer ALTER COLUMN id SET DEFAULT nextval('architectural_layer_id_seq'::regclass);
+
+
+--
+-- Name: curriculum id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY curriculum ALTER COLUMN id SET DEFAULT nextval('curriculum_id_seq'::regclass);
+
+
+--
+-- Name: department id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY department ALTER COLUMN id SET DEFAULT nextval('department_id_seq'::regclass);
+
+
+--
+-- Name: employee id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY employee ALTER COLUMN id SET DEFAULT nextval('employee_id_seq'::regclass);
+
+
+--
+-- Name: employee_department id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY employee_department ALTER COLUMN id SET DEFAULT nextval('employee_department_id_seq'::regclass);
+
+
+--
+-- Name: learninggoal id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY learninggoal ALTER COLUMN id SET DEFAULT nextval('learning_goal_id_seq'::regclass);
+
+
+--
+-- Name: learninggoal_qualification id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY learninggoal_qualification ALTER COLUMN id SET DEFAULT nextval('learning_goal_qualification_id_seq'::regclass);
+
+
+--
+-- Name: levelofskill id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY levelofskill ALTER COLUMN id SET DEFAULT nextval('level_of_skill_id_seq'::regclass);
+
+
+--
+-- Name: module id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY module ALTER COLUMN id SET DEFAULT nextval('module_id_seq'::regclass);
+
+
+--
+-- Name: module_employee id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY module_employee ALTER COLUMN id SET DEFAULT nextval('module_employee_id_seq'::regclass);
+
+
+--
+-- Name: module_profile id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY module_profile ALTER COLUMN id SET DEFAULT nextval('module_profile_id_seq'::regclass);
+
+
+--
+-- Name: moduleassessment id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleassessment ALTER COLUMN id SET DEFAULT nextval('assessment_id_seq'::regclass);
+
+
+--
+-- Name: moduleassessment_learninggoal id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleassessment_learninggoal ALTER COLUMN id SET DEFAULT nextval('moduleassessment_learninggoal_id_seq'::regclass);
+
+
+--
+-- Name: moduleassessment_moduleassessmenttype id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleassessment_moduleassessmenttype ALTER COLUMN id SET DEFAULT nextval('moduleassessment_moduleassessmenttype_id_seq'::regclass);
+
+
+--
+-- Name: moduleasssementtype id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleasssementtype ALTER COLUMN id SET DEFAULT nextval('asssementtype_id_seq'::regclass);
+
+
+--
+-- Name: moduledependency id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduledependency ALTER COLUMN id SET DEFAULT nextval('module_predecessors_id_seq'::regclass);
+
+
+--
+-- Name: moduledescription id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduledescription ALTER COLUMN id SET DEFAULT nextval('moduledescription_id_seq'::regclass);
+
+
+--
+-- Name: moduletopic id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduletopic ALTER COLUMN id SET DEFAULT nextval('module_topics_id_seq'::regclass);
+
+
+--
+-- Name: professionaltask id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY professionaltask ALTER COLUMN id SET DEFAULT nextval('professional_task_id_seq'::regclass);
+
+
+--
+-- Name: profile id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY profile ALTER COLUMN id SET DEFAULT nextval('profile_id_seq'::regclass);
+
+
+--
+-- Name: profile_qualification id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY profile_qualification ALTER COLUMN id SET DEFAULT nextval('profile_qualification_id_seq'::regclass);
+
+
+--
+-- Name: qualification id; Type: DEFAULT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY qualification ALTER COLUMN id SET DEFAULT nextval('qualification_id_seq'::regclass);
+
+
+--
+-- Name: studyprogramme id; Type: DEFAULT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY studyprogramme ALTER COLUMN id SET DEFAULT nextval('study_programme_id_seq'::regclass);
@@ -1990,21 +2767,21 @@ ALTER TABLE ONLY studyprogramme ALTER COLUMN id SET DEFAULT nextval('study_progr
 SET search_path = users, pg_catalog;
 
 --
--- Name: accessright id; Type: DEFAULT; Schema: users; Owner: module
+-- Name: accessright id; Type: DEFAULT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY accessright ALTER COLUMN id SET DEFAULT nextval('accessright_id_seq'::regclass);
 
 
 --
--- Name: role id; Type: DEFAULT; Schema: users; Owner: module
+-- Name: role id; Type: DEFAULT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY role ALTER COLUMN id SET DEFAULT nextval('role_id_seq'::regclass);
 
 
 --
--- Name: user id; Type: DEFAULT; Schema: users; Owner: module
+-- Name: user id; Type: DEFAULT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY "user" ALTER COLUMN id SET DEFAULT nextval('user_id_seq'::regclass);
@@ -2013,7 +2790,7 @@ ALTER TABLE ONLY "user" ALTER COLUMN id SET DEFAULT nextval('user_id_seq'::regcl
 SET search_path = descriptions, pg_catalog;
 
 --
--- Name: author authors_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: author authors_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY author
@@ -2021,7 +2798,7 @@ ALTER TABLE ONLY author
 
 
 --
--- Name: competence competence_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: competence competence_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY competence
@@ -2029,7 +2806,7 @@ ALTER TABLE ONLY competence
 
 
 --
--- Name: dependency dependency_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: dependency dependency_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY dependency
@@ -2037,7 +2814,7 @@ ALTER TABLE ONLY dependency
 
 
 --
--- Name: learninggoal learninggoal_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: learninggoal learninggoal_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY learninggoal
@@ -2045,7 +2822,7 @@ ALTER TABLE ONLY learninggoal
 
 
 --
--- Name: moduleassessment moduleassessment_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: moduleassessment moduleassessment_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY moduleassessment
@@ -2053,7 +2830,7 @@ ALTER TABLE ONLY moduleassessment
 
 
 --
--- Name: moduledescription moduledescription_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: moduledescription moduledescription_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY moduledescription
@@ -2061,17 +2838,17 @@ ALTER TABLE ONLY moduledescription
 
 
 --
--- Name: topic topic_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: topic topic_pkey; Type: CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY topic
     ADD CONSTRAINT topic_pkey PRIMARY KEY (id);
 
 
-SET search_path = study, pg_catalog;
+SET search_path = public, pg_catalog;
 
 --
--- Name: activity activity_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: activity activity_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY activity
@@ -2079,31 +2856,47 @@ ALTER TABLE ONLY activity
 
 
 --
--- Name: architecturallayer architectural_layer_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: architectural_layer architectural_layer_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY architecturallayer
+ALTER TABLE ONLY architectural_layer
     ADD CONSTRAINT architectural_layer_pk PRIMARY KEY (id);
 
 
 --
--- Name: moduleassessment assessment_pkey; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: performance_criterium assessment_criteria_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY moduleassessment
-    ADD CONSTRAINT assessment_pkey PRIMARY KEY (id);
-
-
---
--- Name: moduleasssementtype asssementtype_pkey; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleasssementtype
-    ADD CONSTRAINT asssementtype_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY performance_criterium
+    ADD CONSTRAINT assessment_criteria_pk PRIMARY KEY (id);
 
 
 --
--- Name: curriculum curriculum_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: assessment_dimension assessment_dimension_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY assessment_dimension
+    ADD CONSTRAINT assessment_dimension_pk PRIMARY KEY (id);
+
+
+--
+-- Name: assessment_dimension assessment_dimension_sequenceno_un; Type: CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY assessment_dimension
+    ADD CONSTRAINT assessment_dimension_sequenceno_un UNIQUE (learning_goal_id, sequenceno);
+
+
+--
+-- Name: lecturer code_un; Type: CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY lecturer
+    ADD CONSTRAINT code_un UNIQUE (code);
+
+
+--
+-- Name: curriculum curriculum_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY curriculum
@@ -2111,63 +2904,47 @@ ALTER TABLE ONLY curriculum
 
 
 --
--- Name: department department_pkey; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: learning_goal learning_goal_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY department
-    ADD CONSTRAINT department_pkey PRIMARY KEY (id);
-
-
---
--- Name: employee_department employee_department_pkey; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY employee_department
-    ADD CONSTRAINT employee_department_pkey PRIMARY KEY (id);
-
-
---
--- Name: employee employee_pkey; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY employee
-    ADD CONSTRAINT employee_pkey PRIMARY KEY (id);
-
-
---
--- Name: learninggoal learning_goal_pk; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY learninggoal
+ALTER TABLE ONLY learning_goal
     ADD CONSTRAINT learning_goal_pk PRIMARY KEY (id);
 
 
 --
--- Name: learninggoal_qualification learning_goal_qualification_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: learning_goal_qualification learning_goal_qualification_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY learninggoal_qualification
+ALTER TABLE ONLY learning_goal_qualification
     ADD CONSTRAINT learning_goal_qualification_pk PRIMARY KEY (id);
 
 
 --
--- Name: levelofskill level_of_skill_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: lecturer lecturer_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY levelofskill
+ALTER TABLE ONLY lecturer
+    ADD CONSTRAINT lecturer_pk PRIMARY KEY (id);
+
+
+--
+-- Name: level_of_skill level_of_skill_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY level_of_skill
     ADD CONSTRAINT level_of_skill_pk PRIMARY KEY (id);
 
 
 --
--- Name: module_employee module_employee_pkey; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: module_assessment module_assessment_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY module_employee
-    ADD CONSTRAINT module_employee_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY module_assessment
+    ADD CONSTRAINT module_assessment_pk PRIMARY KEY (id);
 
 
 --
--- Name: module module_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: module module_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY module
@@ -2175,15 +2952,15 @@ ALTER TABLE ONLY module
 
 
 --
--- Name: moduledependency module_predecessors_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: module_predecessors module_predecessors_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY moduledependency
+ALTER TABLE ONLY module_predecessors
     ADD CONSTRAINT module_predecessors_pk PRIMARY KEY (id);
 
 
 --
--- Name: module_profile module_profile_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: module_profile module_profile_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY module_profile
@@ -2191,7 +2968,7 @@ ALTER TABLE ONLY module_profile
 
 
 --
--- Name: module_profile module_profile_un; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: module_profile module_profile_un; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY module_profile
@@ -2199,47 +2976,15 @@ ALTER TABLE ONLY module_profile
 
 
 --
--- Name: moduletopic module_topics_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: professional_task professional_task_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY moduletopic
-    ADD CONSTRAINT module_topics_pk PRIMARY KEY (id);
-
-
---
--- Name: moduleassessment_learninggoal moduleassessment_learninggoal_pkey; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleassessment_learninggoal
-    ADD CONSTRAINT moduleassessment_learninggoal_pkey PRIMARY KEY (id);
-
-
---
--- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleassessment_id_modul; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleassessment_moduleassessmenttype
-    ADD CONSTRAINT moduleassessment_moduleassessmenttype_moduleassessment_id_modul PRIMARY KEY (moduleassessment_id, moduleassessmenttype_id);
-
-
---
--- Name: moduledescription moduledescription_pkey; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduledescription
-    ADD CONSTRAINT moduledescription_pkey PRIMARY KEY (id);
-
-
---
--- Name: professionaltask professional_task_pk; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY professionaltask
+ALTER TABLE ONLY professional_task
     ADD CONSTRAINT professional_task_pk PRIMARY KEY (id);
 
 
 --
--- Name: profile profile_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: profile profile_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY profile
@@ -2247,15 +2992,7 @@ ALTER TABLE ONLY profile
 
 
 --
--- Name: profile_qualification profile_qualification_pk; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY profile_qualification
-    ADD CONSTRAINT profile_qualification_pk PRIMARY KEY (id);
-
-
---
--- Name: qualification qualification_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: qualification qualification_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY qualification
@@ -2263,7 +3000,233 @@ ALTER TABLE ONLY qualification
 
 
 --
--- Name: profile_qualification qualification_profile_un; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: performance_criterium seqno_un; Type: CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY performance_criterium
+    ADD CONSTRAINT seqno_un UNIQUE (assessment_dimension_id, sequenceno);
+
+
+--
+-- Name: learning_goal sequenceno_un; Type: CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY learning_goal
+    ADD CONSTRAINT sequenceno_un UNIQUE (module_id, sequenceno);
+
+
+--
+-- Name: profile study_curriculum_un; Type: CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY profile
+    ADD CONSTRAINT study_curriculum_un UNIQUE (curriculum_id, study_programme_id);
+
+
+--
+-- Name: study_programme study_programme_pk; Type: CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY study_programme
+    ADD CONSTRAINT study_programme_pk PRIMARY KEY (id);
+
+
+SET search_path = study, pg_catalog;
+
+--
+-- Name: activity activity_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY activity
+    ADD CONSTRAINT activity_pk PRIMARY KEY (id);
+
+
+--
+-- Name: architecturallayer architectural_layer_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY architecturallayer
+    ADD CONSTRAINT architectural_layer_pk PRIMARY KEY (id);
+
+
+--
+-- Name: moduleassessment assessment_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleassessment
+    ADD CONSTRAINT assessment_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: moduleasssementtype asssementtype_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleasssementtype
+    ADD CONSTRAINT asssementtype_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: curriculum curriculum_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY curriculum
+    ADD CONSTRAINT curriculum_pk PRIMARY KEY (id);
+
+
+--
+-- Name: department department_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY department
+    ADD CONSTRAINT department_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: employee_department employee_department_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY employee_department
+    ADD CONSTRAINT employee_department_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: employee employee_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY employee
+    ADD CONSTRAINT employee_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: learninggoal learning_goal_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY learninggoal
+    ADD CONSTRAINT learning_goal_pk PRIMARY KEY (id);
+
+
+--
+-- Name: learninggoal_qualification learning_goal_qualification_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY learninggoal_qualification
+    ADD CONSTRAINT learning_goal_qualification_pk PRIMARY KEY (id);
+
+
+--
+-- Name: levelofskill level_of_skill_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY levelofskill
+    ADD CONSTRAINT level_of_skill_pk PRIMARY KEY (id);
+
+
+--
+-- Name: module_employee module_employee_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY module_employee
+    ADD CONSTRAINT module_employee_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: module module_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY module
+    ADD CONSTRAINT module_pk PRIMARY KEY (id);
+
+
+--
+-- Name: moduledependency module_predecessors_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduledependency
+    ADD CONSTRAINT module_predecessors_pk PRIMARY KEY (id);
+
+
+--
+-- Name: module_profile module_profile_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY module_profile
+    ADD CONSTRAINT module_profile_pk PRIMARY KEY (id);
+
+
+--
+-- Name: module_profile module_profile_un; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY module_profile
+    ADD CONSTRAINT module_profile_un UNIQUE (module_id, profile_id);
+
+
+--
+-- Name: moduletopic module_topics_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduletopic
+    ADD CONSTRAINT module_topics_pk PRIMARY KEY (id);
+
+
+--
+-- Name: moduleassessment_learninggoal moduleassessment_learninggoal_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleassessment_learninggoal
+    ADD CONSTRAINT moduleassessment_learninggoal_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleassessment_id_modul; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleassessment_moduleassessmenttype
+    ADD CONSTRAINT moduleassessment_moduleassessmenttype_moduleassessment_id_modul PRIMARY KEY (moduleassessment_id, moduleassessmenttype_id);
+
+
+--
+-- Name: moduledescription moduledescription_pkey; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduledescription
+    ADD CONSTRAINT moduledescription_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: professionaltask professional_task_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY professionaltask
+    ADD CONSTRAINT professional_task_pk PRIMARY KEY (id);
+
+
+--
+-- Name: profile profile_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY profile
+    ADD CONSTRAINT profile_pk PRIMARY KEY (id);
+
+
+--
+-- Name: profile_qualification profile_qualification_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY profile_qualification
+    ADD CONSTRAINT profile_qualification_pk PRIMARY KEY (id);
+
+
+--
+-- Name: qualification qualification_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY qualification
+    ADD CONSTRAINT qualification_pk PRIMARY KEY (id);
+
+
+--
+-- Name: profile_qualification qualification_profile_un; Type: CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY profile_qualification
@@ -2271,7 +3234,7 @@ ALTER TABLE ONLY profile_qualification
 
 
 --
--- Name: learninggoal sequenceno_un; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: learninggoal sequenceno_un; Type: CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY learninggoal
@@ -2279,7 +3242,7 @@ ALTER TABLE ONLY learninggoal
 
 
 --
--- Name: moduletopic sequenceno_un2; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: moduletopic sequenceno_un2; Type: CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY moduletopic
@@ -2287,7 +3250,7 @@ ALTER TABLE ONLY moduletopic
 
 
 --
--- Name: profile study_curriculum_un; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: profile study_curriculum_un; Type: CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY profile
@@ -2295,7 +3258,7 @@ ALTER TABLE ONLY profile
 
 
 --
--- Name: studyprogramme study_programme_pk; Type: CONSTRAINT; Schema: study; Owner: module
+-- Name: studyprogramme study_programme_pk; Type: CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY studyprogramme
@@ -2305,7 +3268,7 @@ ALTER TABLE ONLY studyprogramme
 SET search_path = users, pg_catalog;
 
 --
--- Name: accessright accessright_pkey; Type: CONSTRAINT; Schema: users; Owner: module
+-- Name: accessright accessright_pkey; Type: CONSTRAINT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY accessright
@@ -2313,7 +3276,7 @@ ALTER TABLE ONLY accessright
 
 
 --
--- Name: role role_pkey; Type: CONSTRAINT; Schema: users; Owner: module
+-- Name: role role_pkey; Type: CONSTRAINT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY role
@@ -2321,7 +3284,7 @@ ALTER TABLE ONLY role
 
 
 --
--- Name: user user_pkey; Type: CONSTRAINT; Schema: users; Owner: module
+-- Name: user user_pkey; Type: CONSTRAINT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY "user"
@@ -2329,7 +3292,7 @@ ALTER TABLE ONLY "user"
 
 
 --
--- Name: user_role user_role_pkey; Type: CONSTRAINT; Schema: users; Owner: module
+-- Name: user_role user_role_pkey; Type: CONSTRAINT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY user_role
@@ -2339,91 +3302,91 @@ ALTER TABLE ONLY user_role
 SET search_path = descriptions, pg_catalog;
 
 --
--- Name: authors_employee_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: authors_employee_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX authors_employee_id_index ON author USING btree (orig_employee_id);
 
 
 --
--- Name: competence_learninggoal_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: competence_learninggoal_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX competence_learninggoal_id_index ON competence USING btree (learninggoal_id);
 
 
 --
--- Name: competence_orig_learninggoal_qualification_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: competence_orig_learninggoal_qualification_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX competence_orig_learninggoal_qualification_id_index ON competence USING btree (orig_learninggoal_qualification_id);
 
 
 --
--- Name: dependency_module_dependency_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: dependency_module_dependency_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX dependency_module_dependency_id_index ON dependency USING btree (orig_module_dependency_id);
 
 
 --
--- Name: dependency_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: dependency_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX dependency_moduledescription_id_index ON dependency USING btree (moduledescription_id);
 
 
 --
--- Name: learninggoal_learninggoal_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: learninggoal_learninggoal_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX learninggoal_learninggoal_id_index ON learninggoal USING btree (orig_learninggoal_id);
 
 
 --
--- Name: learninggoal_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: learninggoal_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX learninggoal_moduledescription_id_index ON learninggoal USING btree (moduledescription_id);
 
 
 --
--- Name: moduleassessment_learninggoal_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: moduleassessment_learninggoal_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX moduleassessment_learninggoal_id_index ON moduleassessment USING btree (learninggoal_id);
 
 
 --
--- Name: moduleassessment_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: moduleassessment_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX moduleassessment_moduledescription_id_index ON moduleassessment USING btree (moduledescription_id);
 
 
 --
--- Name: moduledescription_module_id_version_uindex; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: moduledescription_module_id_version_uindex; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE UNIQUE INDEX moduledescription_module_id_version_uindex ON moduledescription USING btree (module_id, version);
 
 
 --
--- Name: moduledescription_orig_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: moduledescription_orig_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX moduledescription_orig_moduledescription_id_index ON moduledescription USING btree (orig_moduledescription_id);
 
 
 --
--- Name: topic_module_topic_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: topic_module_topic_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX topic_module_topic_id_index ON topic USING btree (orig_module_topic_id);
 
 
 --
--- Name: topic_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: module
+-- Name: topic_moduledescription_id_index; Type: INDEX; Schema: descriptions; Owner: fmms
 --
 
 CREATE INDEX topic_moduledescription_id_index ON topic USING btree (moduledescription_id);
@@ -2432,91 +3395,91 @@ CREATE INDEX topic_moduledescription_id_index ON topic USING btree (moduledescri
 SET search_path = study, pg_catalog;
 
 --
--- Name: assessment_code_uindex; Type: INDEX; Schema: study; Owner: module
+-- Name: assessment_code_uindex; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE UNIQUE INDEX assessment_code_uindex ON moduleassessment USING btree (code);
 
 
 --
--- Name: assessment_module_id_index; Type: INDEX; Schema: study; Owner: module
+-- Name: assessment_module_id_index; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE INDEX assessment_module_id_index ON moduleassessment USING btree (module_id);
 
 
 --
--- Name: curriculum_department_id_index; Type: INDEX; Schema: study; Owner: module
+-- Name: curriculum_department_id_index; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE INDEX curriculum_department_id_index ON curriculum USING btree (department_id);
 
 
 --
--- Name: curriculum_owner_employee_id_index; Type: INDEX; Schema: study; Owner: module
+-- Name: curriculum_owner_employee_id_index; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE INDEX curriculum_owner_employee_id_index ON curriculum USING btree (owner_employee_id);
 
 
 --
--- Name: employee_code_uindex; Type: INDEX; Schema: study; Owner: module
+-- Name: employee_code_uindex; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE UNIQUE INDEX employee_code_uindex ON employee USING btree (code);
 
 
 --
--- Name: employee_department_department_id_index; Type: INDEX; Schema: study; Owner: module
+-- Name: employee_department_department_id_index; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE INDEX employee_department_department_id_index ON employee_department USING btree (department_id);
 
 
 --
--- Name: employee_department_employee_id_index; Type: INDEX; Schema: study; Owner: module
+-- Name: employee_department_employee_id_index; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE INDEX employee_department_employee_id_index ON employee_department USING btree (employee_id);
 
 
 --
--- Name: employee_pcn_uindex; Type: INDEX; Schema: study; Owner: module
+-- Name: employee_pcn_uindex; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE UNIQUE INDEX employee_pcn_uindex ON employee USING btree (pcn);
 
 
 --
--- Name: module_code_uindex; Type: INDEX; Schema: study; Owner: module
+-- Name: module_code_uindex; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE UNIQUE INDEX module_code_uindex ON module USING btree (code);
 
 
 --
--- Name: module_dependency_module_id_dependency_module_id_uindex; Type: INDEX; Schema: study; Owner: module
+-- Name: module_dependency_module_id_dependency_module_id_uindex; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE UNIQUE INDEX module_dependency_module_id_dependency_module_id_uindex ON moduledependency USING btree (module_id, dependency_module_id);
 
 
 --
--- Name: module_employee_module_id_employee_id_uindex; Type: INDEX; Schema: study; Owner: module
+-- Name: module_employee_module_id_employee_id_uindex; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE UNIQUE INDEX module_employee_module_id_employee_id_uindex ON module_employee USING btree (module_id, employee_id);
 
 
 --
--- Name: moduleassessment_learninggoal_moduleassessment_id_learninggoal_; Type: INDEX; Schema: study; Owner: module
+-- Name: moduleassessment_learninggoal_moduleassessment_id_learninggoal_; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE UNIQUE INDEX moduleassessment_learninggoal_moduleassessment_id_learninggoal_ ON moduleassessment_learninggoal USING btree (moduleassessment_id, learninggoal_id);
 
 
 --
--- Name: moduledescription_module_id_uindex; Type: INDEX; Schema: study; Owner: module
+-- Name: moduledescription_module_id_uindex; Type: INDEX; Schema: study; Owner: fmms
 --
 
 CREATE UNIQUE INDEX moduledescription_module_id_uindex ON moduledescription USING btree (module_id);
@@ -2525,35 +3488,35 @@ CREATE UNIQUE INDEX moduledescription_module_id_uindex ON moduledescription USIN
 SET search_path = users, pg_catalog;
 
 --
--- Name: accessright_role_id_uindex; Type: INDEX; Schema: users; Owner: module
+-- Name: accessright_role_id_uindex; Type: INDEX; Schema: users; Owner: fmms
 --
 
 CREATE UNIQUE INDEX accessright_role_id_uindex ON accessright USING btree (role_id);
 
 
 --
--- Name: user_employee_id_uindex; Type: INDEX; Schema: users; Owner: module
+-- Name: user_employee_id_uindex; Type: INDEX; Schema: users; Owner: fmms
 --
 
 CREATE UNIQUE INDEX user_employee_id_uindex ON "user" USING btree (employee_id);
 
 
 --
--- Name: user_role_id_uindex; Type: INDEX; Schema: users; Owner: module
+-- Name: user_role_id_uindex; Type: INDEX; Schema: users; Owner: fmms
 --
 
 CREATE UNIQUE INDEX user_role_id_uindex ON user_role USING btree (id);
 
 
 --
--- Name: user_role_role_id_user_id_uindex; Type: INDEX; Schema: users; Owner: module
+-- Name: user_role_role_id_user_id_uindex; Type: INDEX; Schema: users; Owner: fmms
 --
 
 CREATE UNIQUE INDEX user_role_role_id_user_id_uindex ON user_role USING btree (role_id, user_id);
 
 
 --
--- Name: user_username_uindex; Type: INDEX; Schema: users; Owner: module
+-- Name: user_username_uindex; Type: INDEX; Schema: users; Owner: fmms
 --
 
 CREATE UNIQUE INDEX user_username_uindex ON "user" USING btree (username);
@@ -2562,7 +3525,7 @@ CREATE UNIQUE INDEX user_username_uindex ON "user" USING btree (username);
 SET search_path = descriptions, pg_catalog;
 
 --
--- Name: moduledescription protect_final_descriptions_delete; Type: RULE; Schema: descriptions; Owner: module
+-- Name: moduledescription protect_final_descriptions_delete; Type: RULE; Schema: descriptions; Owner: fmms
 --
 
 CREATE RULE protect_final_descriptions_delete AS
@@ -2570,24 +3533,40 @@ CREATE RULE protect_final_descriptions_delete AS
 
 
 --
--- Name: moduledescription protect_final_descriptions_update; Type: RULE; Schema: descriptions; Owner: module
+-- Name: moduledescription protect_final_descriptions_update; Type: RULE; Schema: descriptions; Owner: fmms
 --
 
 CREATE RULE protect_final_descriptions_update AS
     ON UPDATE TO moduledescription DO INSTEAD NOTHING;
 
 
+SET search_path = public, pg_catalog;
+
+--
+-- Name: learning_goal avoid_update_released_module; Type: TRIGGER; Schema: public; Owner: fmms
+--
+
+CREATE TRIGGER avoid_update_released_module BEFORE INSERT OR DELETE OR UPDATE ON learning_goal FOR EACH ROW EXECUTE PROCEDURE avoid_update_released_module('learning_goal_id');
+
+
+--
+-- Name: learning_goal_qualification avoid_update_released_module; Type: TRIGGER; Schema: public; Owner: fmms
+--
+
+CREATE TRIGGER avoid_update_released_module BEFORE INSERT OR DELETE OR UPDATE ON learning_goal_qualification FOR EACH ROW EXECUTE PROCEDURE avoid_update_released_module('learning_goal_qualification_id');
+
+
 SET search_path = study, pg_catalog;
 
 --
--- Name: learninggoal trigger_learninggoal_create; Type: TRIGGER; Schema: study; Owner: module
+-- Name: learninggoal trigger_learninggoal_create; Type: TRIGGER; Schema: study; Owner: fmms
 --
 
 CREATE TRIGGER trigger_learninggoal_create BEFORE INSERT ON learninggoal FOR EACH ROW EXECUTE PROCEDURE learninggoal_update();
 
 
 --
--- Name: learninggoal trigger_learninggoal_update; Type: TRIGGER; Schema: study; Owner: module
+-- Name: learninggoal trigger_learninggoal_update; Type: TRIGGER; Schema: study; Owner: fmms
 --
 
 CREATE TRIGGER trigger_learninggoal_update BEFORE UPDATE OF sequenceno, weight ON learninggoal FOR EACH ROW EXECUTE PROCEDURE learninggoal_update();
@@ -2596,7 +3575,7 @@ CREATE TRIGGER trigger_learninggoal_update BEFORE UPDATE OF sequenceno, weight O
 SET search_path = descriptions, pg_catalog;
 
 --
--- Name: author author_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: author author_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY author
@@ -2604,7 +3583,7 @@ ALTER TABLE ONLY author
 
 
 --
--- Name: author authors_employee_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: author authors_employee_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY author
@@ -2612,7 +3591,7 @@ ALTER TABLE ONLY author
 
 
 --
--- Name: competence competence_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: competence competence_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY competence
@@ -2620,7 +3599,7 @@ ALTER TABLE ONLY competence
 
 
 --
--- Name: competence competence_learninggoal_qualification_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: competence competence_learninggoal_qualification_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY competence
@@ -2628,7 +3607,7 @@ ALTER TABLE ONLY competence
 
 
 --
--- Name: dependency dependency_module_dependency_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: dependency dependency_module_dependency_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY dependency
@@ -2636,7 +3615,7 @@ ALTER TABLE ONLY dependency
 
 
 --
--- Name: dependency dependency_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: dependency dependency_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY dependency
@@ -2644,7 +3623,7 @@ ALTER TABLE ONLY dependency
 
 
 --
--- Name: learninggoal learninggoal_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: learninggoal learninggoal_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY learninggoal
@@ -2652,7 +3631,7 @@ ALTER TABLE ONLY learninggoal
 
 
 --
--- Name: learninggoal learninggoal_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: learninggoal learninggoal_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY learninggoal
@@ -2660,7 +3639,7 @@ ALTER TABLE ONLY learninggoal
 
 
 --
--- Name: moduleassessment moduleassessment_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: moduleassessment moduleassessment_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY moduleassessment
@@ -2668,7 +3647,7 @@ ALTER TABLE ONLY moduleassessment
 
 
 --
--- Name: moduleassessment moduleassessment_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: moduleassessment moduleassessment_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY moduleassessment
@@ -2676,7 +3655,7 @@ ALTER TABLE ONLY moduleassessment
 
 
 --
--- Name: moduledescription moduledescription_module_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: moduledescription moduledescription_module_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY moduledescription
@@ -2684,7 +3663,7 @@ ALTER TABLE ONLY moduledescription
 
 
 --
--- Name: moduledescription moduledescription_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: moduledescription moduledescription_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY moduledescription
@@ -2692,7 +3671,7 @@ ALTER TABLE ONLY moduledescription
 
 
 --
--- Name: topic topic_module_topic_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: topic topic_module_topic_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY topic
@@ -2700,17 +3679,17 @@ ALTER TABLE ONLY topic
 
 
 --
--- Name: topic topic_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: module
+-- Name: topic topic_moduledescription_id_fk; Type: FK CONSTRAINT; Schema: descriptions; Owner: fmms
 --
 
 ALTER TABLE ONLY topic
     ADD CONSTRAINT topic_moduledescription_id_fk FOREIGN KEY (moduledescription_id) REFERENCES moduledescription(id) ON UPDATE CASCADE;
 
 
-SET search_path = study, pg_catalog;
+SET search_path = public, pg_catalog;
 
 --
--- Name: qualification activity_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: qualification activity_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY qualification
@@ -2718,39 +3697,31 @@ ALTER TABLE ONLY qualification
 
 
 --
--- Name: qualification architectural_layer_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: qualification architectural_layer_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY qualification
-    ADD CONSTRAINT architectural_layer_fk FOREIGN KEY (architecturallayer_id) REFERENCES architecturallayer(id);
+    ADD CONSTRAINT architectural_layer_fk FOREIGN KEY (architectural_layer_id) REFERENCES architectural_layer(id);
 
 
 --
--- Name: moduleassessment assessment_module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: performance_criterium assessment_dimension_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY moduleassessment
-    ADD CONSTRAINT assessment_module_id_fk FOREIGN KEY (module_id) REFERENCES module(id) ON UPDATE CASCADE ON DELETE CASCADE;
-
-
---
--- Name: curriculum curriculum_department_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY curriculum
-    ADD CONSTRAINT curriculum_department_id_fk FOREIGN KEY (department_id) REFERENCES department(id) ON UPDATE CASCADE;
+ALTER TABLE ONLY performance_criterium
+    ADD CONSTRAINT assessment_dimension_id_fk FOREIGN KEY (assessment_dimension_id) REFERENCES assessment_dimension(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
 --
--- Name: curriculum curriculum_employee_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: module created_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
 --
 
-ALTER TABLE ONLY curriculum
-    ADD CONSTRAINT curriculum_employee_id_fk FOREIGN KEY (owner_employee_id) REFERENCES employee(id) ON UPDATE CASCADE;
+ALTER TABLE ONLY module
+    ADD CONSTRAINT created_by_fk FOREIGN KEY (created_by) REFERENCES lecturer(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
 --
--- Name: profile curriculum_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: profile curriculum_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
 --
 
 ALTER TABLE ONLY profile
@@ -2758,7 +3729,169 @@ ALTER TABLE ONLY profile
 
 
 --
--- Name: employee_department employee_department_department_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: assessment_dimension learning_goal_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY assessment_dimension
+    ADD CONSTRAINT learning_goal_id_fk FOREIGN KEY (learning_goal_id) REFERENCES learning_goal(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: learning_goal_qualification learning_goal_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY learning_goal_qualification
+    ADD CONSTRAINT learning_goal_id_fk FOREIGN KEY (learning_goal_id) REFERENCES learning_goal(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: qualification level_of_skill_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY qualification
+    ADD CONSTRAINT level_of_skill_fk FOREIGN KEY (level_of_skill_id) REFERENCES level_of_skill(id);
+
+
+--
+-- Name: module_profile module_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY module_profile
+    ADD CONSTRAINT module_id_fk FOREIGN KEY (module_id) REFERENCES module(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: learning_goal module_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY learning_goal
+    ADD CONSTRAINT module_id_fk FOREIGN KEY (module_id) REFERENCES module(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: module_assessment module_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY module_assessment
+    ADD CONSTRAINT module_id_fk FOREIGN KEY (module_id) REFERENCES module(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: module_predecessors module_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY module_predecessors
+    ADD CONSTRAINT module_id_fk FOREIGN KEY (module_id) REFERENCES module(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: module_predecessors module_id_predecessor_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY module_predecessors
+    ADD CONSTRAINT module_id_predecessor_fk FOREIGN KEY (module_id_predecessor) REFERENCES module(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: module previous_revision_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY module
+    ADD CONSTRAINT previous_revision_fk FOREIGN KEY (previous_revision) REFERENCES module(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: module_profile profile_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY module_profile
+    ADD CONSTRAINT profile_id_fk FOREIGN KEY (profile_id) REFERENCES profile(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: professional_task qualification_id; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY professional_task
+    ADD CONSTRAINT qualification_id FOREIGN KEY (qualification_id) REFERENCES qualification(id);
+
+
+--
+-- Name: learning_goal_qualification qualification_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY learning_goal_qualification
+    ADD CONSTRAINT qualification_id_fk FOREIGN KEY (qualification_id) REFERENCES qualification(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: module released_by_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY module
+    ADD CONSTRAINT released_by_fk FOREIGN KEY (released_by) REFERENCES lecturer(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: profile study_programme_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: fmms
+--
+
+ALTER TABLE ONLY profile
+    ADD CONSTRAINT study_programme_id_fk FOREIGN KEY (study_programme_id) REFERENCES study_programme(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+SET search_path = study, pg_catalog;
+
+--
+-- Name: qualification activity_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY qualification
+    ADD CONSTRAINT activity_fk FOREIGN KEY (activity_id) REFERENCES activity(id);
+
+
+--
+-- Name: qualification architectural_layer_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY qualification
+    ADD CONSTRAINT architectural_layer_fk FOREIGN KEY (architecturallayer_id) REFERENCES architecturallayer(id);
+
+
+--
+-- Name: moduleassessment assessment_module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY moduleassessment
+    ADD CONSTRAINT assessment_module_id_fk FOREIGN KEY (module_id) REFERENCES module(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: curriculum curriculum_department_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY curriculum
+    ADD CONSTRAINT curriculum_department_id_fk FOREIGN KEY (department_id) REFERENCES department(id) ON UPDATE CASCADE;
+
+
+--
+-- Name: curriculum curriculum_employee_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY curriculum
+    ADD CONSTRAINT curriculum_employee_id_fk FOREIGN KEY (owner_employee_id) REFERENCES employee(id) ON UPDATE CASCADE;
+
+
+--
+-- Name: profile curriculum_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
+--
+
+ALTER TABLE ONLY profile
+    ADD CONSTRAINT curriculum_id_fk FOREIGN KEY (curriculum_id) REFERENCES curriculum(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: employee_department employee_department_department_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY employee_department
@@ -2766,7 +3899,7 @@ ALTER TABLE ONLY employee_department
 
 
 --
--- Name: employee_department employee_department_employee_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: employee_department employee_department_employee_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY employee_department
@@ -2774,7 +3907,7 @@ ALTER TABLE ONLY employee_department
 
 
 --
--- Name: learninggoal_qualification learning_goal_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: learninggoal_qualification learning_goal_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY learninggoal_qualification
@@ -2782,7 +3915,7 @@ ALTER TABLE ONLY learninggoal_qualification
 
 
 --
--- Name: qualification level_of_skill_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: qualification level_of_skill_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY qualification
@@ -2790,7 +3923,7 @@ ALTER TABLE ONLY qualification
 
 
 --
--- Name: module_employee module_employee_employee_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: module_employee module_employee_employee_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY module_employee
@@ -2798,7 +3931,7 @@ ALTER TABLE ONLY module_employee
 
 
 --
--- Name: module_employee module_employee_module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: module_employee module_employee_module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY module_employee
@@ -2806,7 +3939,7 @@ ALTER TABLE ONLY module_employee
 
 
 --
--- Name: module_profile module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: module_profile module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY module_profile
@@ -2814,7 +3947,7 @@ ALTER TABLE ONLY module_profile
 
 
 --
--- Name: learninggoal module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: learninggoal module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY learninggoal
@@ -2822,7 +3955,7 @@ ALTER TABLE ONLY learninggoal
 
 
 --
--- Name: moduledependency module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: moduledependency module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY moduledependency
@@ -2830,7 +3963,7 @@ ALTER TABLE ONLY moduledependency
 
 
 --
--- Name: moduletopic module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: moduletopic module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY moduletopic
@@ -2838,7 +3971,7 @@ ALTER TABLE ONLY moduletopic
 
 
 --
--- Name: moduleassessment_learninggoal moduleassessment_learninggoal_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: moduleassessment_learninggoal moduleassessment_learninggoal_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY moduleassessment_learninggoal
@@ -2846,7 +3979,7 @@ ALTER TABLE ONLY moduleassessment_learninggoal
 
 
 --
--- Name: moduleassessment_learninggoal moduleassessment_learninggoal_moduleassessment_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: moduleassessment_learninggoal moduleassessment_learninggoal_moduleassessment_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY moduleassessment_learninggoal
@@ -2854,7 +3987,7 @@ ALTER TABLE ONLY moduleassessment_learninggoal
 
 
 --
--- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleassessment_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleassessment_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY moduleassessment_moduleassessmenttype
@@ -2862,7 +3995,7 @@ ALTER TABLE ONLY moduleassessment_moduleassessmenttype
 
 
 --
--- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleasssementtype_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleasssementtype_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY moduleassessment_moduleassessmenttype
@@ -2870,7 +4003,7 @@ ALTER TABLE ONLY moduleassessment_moduleassessmenttype
 
 
 --
--- Name: moduledescription moduledescription_module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: moduledescription moduledescription_module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY moduledescription
@@ -2878,7 +4011,7 @@ ALTER TABLE ONLY moduledescription
 
 
 --
--- Name: profile_qualification profile_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: profile_qualification profile_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY profile_qualification
@@ -2886,7 +4019,7 @@ ALTER TABLE ONLY profile_qualification
 
 
 --
--- Name: module_profile profile_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: module_profile profile_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY module_profile
@@ -2894,7 +4027,7 @@ ALTER TABLE ONLY module_profile
 
 
 --
--- Name: professionaltask qualification_id; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: professionaltask qualification_id; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY professionaltask
@@ -2902,7 +4035,7 @@ ALTER TABLE ONLY professionaltask
 
 
 --
--- Name: profile_qualification qualification_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: profile_qualification qualification_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY profile_qualification
@@ -2910,7 +4043,7 @@ ALTER TABLE ONLY profile_qualification
 
 
 --
--- Name: learninggoal_qualification qualification_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: learninggoal_qualification qualification_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY learninggoal_qualification
@@ -2918,7 +4051,7 @@ ALTER TABLE ONLY learninggoal_qualification
 
 
 --
--- Name: profile study_programme_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+-- Name: profile study_programme_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: fmms
 --
 
 ALTER TABLE ONLY profile
@@ -2928,7 +4061,7 @@ ALTER TABLE ONLY profile
 SET search_path = users, pg_catalog;
 
 --
--- Name: user user_employee_id_fk; Type: FK CONSTRAINT; Schema: users; Owner: module
+-- Name: user user_employee_id_fk; Type: FK CONSTRAINT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY "user"
@@ -2936,7 +4069,7 @@ ALTER TABLE ONLY "user"
 
 
 --
--- Name: user_role user_role_role_id_fk; Type: FK CONSTRAINT; Schema: users; Owner: module
+-- Name: user_role user_role_role_id_fk; Type: FK CONSTRAINT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY user_role
@@ -2944,7 +4077,7 @@ ALTER TABLE ONLY user_role
 
 
 --
--- Name: user_role user_role_user_id_fk; Type: FK CONSTRAINT; Schema: users; Owner: module
+-- Name: user_role user_role_user_id_fk; Type: FK CONSTRAINT; Schema: users; Owner: fmms
 --
 
 ALTER TABLE ONLY user_role
@@ -2952,7 +4085,7 @@ ALTER TABLE ONLY user_role
 
 
 --
--- Name: study; Type: ACL; Schema: -; Owner: module
+-- Name: study; Type: ACL; Schema: -; Owner: fmms
 --
 
 GRANT ALL ON SCHEMA study TO PUBLIC;
