@@ -8,7 +8,7 @@ if [ -f scripts/10-latest.sql ]; then
   mv scripts/10-latest.sql history/$(date -r scripts/10-latest.sql +%Y%m%d.sql)
 fi
 
-pg_dump -U fmms -d fmms -s > scripts/10-latest.sql
+pg_dump -h 127.0.0.1 -U fmms -d fmms -s > scripts/10-latest.sql
 
 # Delete changing of plpgsql because this will fail
 sed -i "s/COMMENT ON EXTENSION plpgsql */-- /g" scripts/10-latest.sql
