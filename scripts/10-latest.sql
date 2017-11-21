@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 9.6.5
--- Dumped by pg_dump version 9.6.5
+-- Dumped from database version 9.6.6
+-- Dumped by pg_dump version 10.1
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -77,6 +77,20 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 
 
 SET search_path = study, pg_catalog;
+
+--
+-- Name: teachingmaterials; Type: TYPE; Schema: study; Owner: module
+--
+
+CREATE TYPE teachingmaterials AS ENUM (
+    'BOOK',
+    'WEBSITE',
+    'ARTICLE',
+    'OTHER'
+);
+
+
+ALTER TYPE teachingmaterials OWNER TO module;
 
 --
 -- Name: learninggoal_create(); Type: FUNCTION; Schema: study; Owner: module
@@ -535,6 +549,13 @@ CREATE TABLE moduleassessment (
 
 
 ALTER TABLE moduleassessment OWNER TO module;
+
+--
+-- Name: COLUMN moduleassessment.code; Type: COMMENT; Schema: study; Owner: module
+--
+
+COMMENT ON COLUMN moduleassessment.code IS 'Progress Code';
+
 
 --
 -- Name: assessment_id_seq; Type: SEQUENCE; Schema: study; Owner: module
@@ -1249,40 +1270,6 @@ ALTER SEQUENCE module_topics_id_seq OWNED BY moduletopic.id;
 
 
 --
--- Name: moduleassessment_learninggoal; Type: TABLE; Schema: study; Owner: module
---
-
-CREATE TABLE moduleassessment_learninggoal (
-    id integer NOT NULL,
-    moduleassessment_id integer NOT NULL,
-    learninggoal_id integer NOT NULL
-);
-
-
-ALTER TABLE moduleassessment_learninggoal OWNER TO module;
-
---
--- Name: moduleassessment_learninggoal_id_seq; Type: SEQUENCE; Schema: study; Owner: module
---
-
-CREATE SEQUENCE moduleassessment_learninggoal_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER TABLE moduleassessment_learninggoal_id_seq OWNER TO module;
-
---
--- Name: moduleassessment_learninggoal_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
---
-
-ALTER SEQUENCE moduleassessment_learninggoal_id_seq OWNED BY moduleassessment_learninggoal.id;
-
-
---
 -- Name: moduleassessment_moduleassessmenttype; Type: TABLE; Schema: study; Owner: module
 --
 
@@ -1324,7 +1311,6 @@ CREATE TABLE moduledescription (
     id integer NOT NULL,
     module_id integer NOT NULL,
     introduction text,
-    teachingmaterial text,
     additionalinfo text,
     credentials text,
     validof date
@@ -1646,6 +1632,41 @@ ALTER TABLE study_programme_id_seq OWNER TO module;
 ALTER SEQUENCE study_programme_id_seq OWNED BY studyprogramme.id;
 
 
+--
+-- Name: teachingmaterial; Type: TABLE; Schema: study; Owner: module
+--
+
+CREATE TABLE teachingmaterial (
+    id integer NOT NULL,
+    moduledescription_id integer NOT NULL,
+    type teachingmaterials NOT NULL,
+    description text NOT NULL
+);
+
+
+ALTER TABLE teachingmaterial OWNER TO module;
+
+--
+-- Name: teachingmaterial_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+--
+
+CREATE SEQUENCE teachingmaterial_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE teachingmaterial_id_seq OWNER TO module;
+
+--
+-- Name: teachingmaterial_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+--
+
+ALTER SEQUENCE teachingmaterial_id_seq OWNED BY teachingmaterial.id;
+
+
 SET search_path = users, pg_catalog;
 
 --
@@ -1911,13 +1932,6 @@ ALTER TABLE ONLY moduleassessment ALTER COLUMN id SET DEFAULT nextval('assessmen
 
 
 --
--- Name: moduleassessment_learninggoal id; Type: DEFAULT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleassessment_learninggoal ALTER COLUMN id SET DEFAULT nextval('moduleassessment_learninggoal_id_seq'::regclass);
-
-
---
 -- Name: moduleassessment_moduleassessmenttype id; Type: DEFAULT; Schema: study; Owner: module
 --
 
@@ -1985,6 +1999,13 @@ ALTER TABLE ONLY qualification ALTER COLUMN id SET DEFAULT nextval('qualificatio
 --
 
 ALTER TABLE ONLY studyprogramme ALTER COLUMN id SET DEFAULT nextval('study_programme_id_seq'::regclass);
+
+
+--
+-- Name: teachingmaterial id; Type: DEFAULT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY teachingmaterial ALTER COLUMN id SET DEFAULT nextval('teachingmaterial_id_seq'::regclass);
 
 
 SET search_path = users, pg_catalog;
@@ -2207,14 +2228,6 @@ ALTER TABLE ONLY moduletopic
 
 
 --
--- Name: moduleassessment_learninggoal moduleassessment_learninggoal_pkey; Type: CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleassessment_learninggoal
-    ADD CONSTRAINT moduleassessment_learninggoal_pkey PRIMARY KEY (id);
-
-
---
 -- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleassessment_id_modul; Type: CONSTRAINT; Schema: study; Owner: module
 --
 
@@ -2300,6 +2313,14 @@ ALTER TABLE ONLY profile
 
 ALTER TABLE ONLY studyprogramme
     ADD CONSTRAINT study_programme_pk PRIMARY KEY (id);
+
+
+--
+-- Name: teachingmaterial teachingmaterial_pkey; Type: CONSTRAINT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY teachingmaterial
+    ADD CONSTRAINT teachingmaterial_pkey PRIMARY KEY (id);
 
 
 SET search_path = users, pg_catalog;
@@ -2506,13 +2527,6 @@ CREATE UNIQUE INDEX module_dependency_module_id_dependency_module_id_uindex ON m
 --
 
 CREATE UNIQUE INDEX module_employee_module_id_employee_id_uindex ON module_employee USING btree (module_id, employee_id);
-
-
---
--- Name: moduleassessment_learninggoal_moduleassessment_id_learninggoal_; Type: INDEX; Schema: study; Owner: module
---
-
-CREATE UNIQUE INDEX moduleassessment_learninggoal_moduleassessment_id_learninggoal_ ON moduleassessment_learninggoal USING btree (moduleassessment_id, learninggoal_id);
 
 
 --
@@ -2838,22 +2852,6 @@ ALTER TABLE ONLY moduletopic
 
 
 --
--- Name: moduleassessment_learninggoal moduleassessment_learninggoal_learninggoal_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleassessment_learninggoal
-    ADD CONSTRAINT moduleassessment_learninggoal_learninggoal_id_fk FOREIGN KEY (learninggoal_id) REFERENCES learninggoal(id) ON UPDATE CASCADE;
-
-
---
--- Name: moduleassessment_learninggoal moduleassessment_learninggoal_moduleassessment_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
---
-
-ALTER TABLE ONLY moduleassessment_learninggoal
-    ADD CONSTRAINT moduleassessment_learninggoal_moduleassessment_id_fk FOREIGN KEY (moduleassessment_id) REFERENCES moduleassessment(id) ON UPDATE CASCADE;
-
-
---
 -- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleassessment_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
 --
 
@@ -2923,6 +2921,14 @@ ALTER TABLE ONLY learninggoal_qualification
 
 ALTER TABLE ONLY profile
     ADD CONSTRAINT study_programme_id_fk FOREIGN KEY (studyprogramme_id) REFERENCES studyprogramme(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+
+--
+-- Name: teachingmaterial teachingmaterial_module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY teachingmaterial
+    ADD CONSTRAINT teachingmaterial_module_id_fk FOREIGN KEY (moduledescription_id) REFERENCES module(id) ON UPDATE CASCADE;
 
 
 SET search_path = users, pg_catalog;
