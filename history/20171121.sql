@@ -93,33 +93,64 @@ CREATE TYPE teachingmaterials AS ENUM (
 ALTER TYPE teachingmaterials OWNER TO module;
 
 --
--- Name: moduletopic_calculate_sequenceno(); Type: FUNCTION; Schema: study; Owner: module
+-- Name: learninggoal_create(); Type: FUNCTION; Schema: study; Owner: module
 --
 
-CREATE FUNCTION moduletopic_calculate_sequenceno() RETURNS trigger
+CREATE FUNCTION learninggoal_create() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 DECLARE
     r RECORD;
 BEGIN
     -- check if sequence number does exists
-    if NEW.sequenceno is null THEN
-        select coalesce(max(sequenceno), 0) as seq into r from study.moduletopic where module_id = NEW.module_id;
+    select * into r from study.learninggoal where module_id = NEW.module_id and sequenceno = NEW.sequenceno;
 
-        if found and r.seq is not null THEN
-            NEW.sequenceno := r.seq + 1;
-        ELSE 
-            NEW.sequenceno := 1;
-        END IF;
-
+    IF found THEN
+        return OLD;
     END IF;
 
-    return NEW;
+    -- check if weights does not add up below 100%
+    select sum(weight) as sum into r from study.learninggoal where module_id = NEW.module_id;
+    if ((r.sum + NEW.weight) > 1.0) THEN
+        return OLD;
+    END IF;
+
+    RETURN NEW;
 END;
 $$;
 
 
-ALTER FUNCTION study.moduletopic_calculate_sequenceno() OWNER TO module;
+ALTER FUNCTION study.learninggoal_create() OWNER TO module;
+
+--
+-- Name: learninggoal_update(); Type: FUNCTION; Schema: study; Owner: module
+--
+
+CREATE FUNCTION learninggoal_update() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    r RECORD;
+BEGIN
+    -- check if sequence number does exists
+    select * into r from study.learninggoal where module_id = NEW.module_id and id != NEW.id and sequenceno = NEW.sequenceno;
+
+    IF found THEN
+        return OLD;
+    END IF;
+
+    -- check if weights does not add up below 100%
+    select sum(weight) as sum into r from study.learninggoal where module_id = NEW.module_id;
+    if (r.sum > 1.0) THEN
+        return OLD;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION study.learninggoal_update() OWNER TO module;
 
 SET search_path = descriptions, pg_catalog;
 
@@ -1208,7 +1239,7 @@ ALTER SEQUENCE module_profile_id_seq OWNED BY module_profile.id;
 CREATE TABLE moduletopic (
     id integer NOT NULL,
     module_id integer,
-    sequenceno smallint,
+    sequenceno smallint DEFAULT 1 NOT NULL,
     description text NOT NULL,
     CONSTRAINT module_id_nn CHECK ((module_id IS NOT NULL)),
     CONSTRAINT topic_sequence_check CHECK ((sequenceno > 0))
@@ -2563,10 +2594,17 @@ CREATE RULE protect_final_descriptions_update AS
 SET search_path = study, pg_catalog;
 
 --
--- Name: moduletopic calculate_sequenceno; Type: TRIGGER; Schema: study; Owner: module
+-- Name: learninggoal trigger_learninggoal_create; Type: TRIGGER; Schema: study; Owner: module
 --
 
-CREATE TRIGGER calculate_sequenceno BEFORE INSERT OR UPDATE OF sequenceno ON moduletopic FOR EACH ROW EXECUTE PROCEDURE moduletopic_calculate_sequenceno();
+CREATE TRIGGER trigger_learninggoal_create BEFORE INSERT ON learninggoal FOR EACH ROW EXECUTE PROCEDURE learninggoal_update();
+
+
+--
+-- Name: learninggoal trigger_learninggoal_update; Type: TRIGGER; Schema: study; Owner: module
+--
+
+CREATE TRIGGER trigger_learninggoal_update BEFORE UPDATE OF sequenceno, weight ON learninggoal FOR EACH ROW EXECUTE PROCEDURE learninggoal_update();
 
 
 SET search_path = descriptions, pg_catalog;
