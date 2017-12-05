@@ -79,19 +79,6 @@ CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 SET search_path = study, pg_catalog;
 
 --
--- Name: dependencytype; Type: TYPE; Schema: study; Owner: module
---
-
-CREATE TYPE dependencytype AS ENUM (
-    'PRIOR',
-    'CONCURRENT',
-    'MANDATORY'
-);
-
-
-ALTER TYPE dependencytype OWNER TO module;
-
---
 -- Name: teachingmaterials; Type: TYPE; Schema: study; Owner: module
 --
 
@@ -558,6 +545,39 @@ ALTER TABLE assessment_id_seq OWNER TO module;
 --
 
 ALTER SEQUENCE assessment_id_seq OWNED BY moduleassessment.id;
+
+
+--
+-- Name: moduleasssementtype; Type: TABLE; Schema: study; Owner: module
+--
+
+CREATE TABLE moduleasssementtype (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL
+);
+
+
+ALTER TABLE moduleasssementtype OWNER TO module;
+
+--
+-- Name: asssementtype_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+--
+
+CREATE SEQUENCE asssementtype_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE asssementtype_id_seq OWNER TO module;
+
+--
+-- Name: asssementtype_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+--
+
+ALTER SEQUENCE asssementtype_id_seq OWNED BY moduleasssementtype.id;
 
 
 --
@@ -1115,8 +1135,10 @@ CREATE TABLE moduledependency (
     id integer NOT NULL,
     module_id integer NOT NULL,
     dependency_module_id integer NOT NULL,
+    mandatory boolean DEFAULT false NOT NULL,
+    concurrent boolean DEFAULT false NOT NULL,
     remarks text,
-    type dependencytype DEFAULT 'PRIOR'::dependencytype NOT NULL,
+    CONSTRAINT dependency_concurrent_check CHECK (((concurrent = false) OR (mandatory = false))),
     CONSTRAINT ids_not_null CHECK (((module_id IS NOT NULL) AND (dependency_module_id IS NOT NULL)))
 );
 
@@ -1214,6 +1236,40 @@ ALTER TABLE module_topics_id_seq OWNER TO module;
 --
 
 ALTER SEQUENCE module_topics_id_seq OWNED BY moduletopic.id;
+
+
+--
+-- Name: moduleassessment_moduleassessmenttype; Type: TABLE; Schema: study; Owner: module
+--
+
+CREATE TABLE moduleassessment_moduleassessmenttype (
+    id integer NOT NULL,
+    moduleassessment_id integer NOT NULL,
+    moduleassessmenttype_id integer NOT NULL
+);
+
+
+ALTER TABLE moduleassessment_moduleassessmenttype OWNER TO module;
+
+--
+-- Name: moduleassessment_moduleassessmenttype_id_seq; Type: SEQUENCE; Schema: study; Owner: module
+--
+
+CREATE SEQUENCE moduleassessment_moduleassessmenttype_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE moduleassessment_moduleassessmenttype_id_seq OWNER TO module;
+
+--
+-- Name: moduleassessment_moduleassessmenttype_id_seq; Type: SEQUENCE OWNED BY; Schema: study; Owner: module
+--
+
+ALTER SEQUENCE moduleassessment_moduleassessmenttype_id_seq OWNED BY moduleassessment_moduleassessmenttype.id;
 
 
 --
@@ -1845,6 +1901,20 @@ ALTER TABLE ONLY moduleassessment ALTER COLUMN id SET DEFAULT nextval('assessmen
 
 
 --
+-- Name: moduleassessment_moduleassessmenttype id; Type: DEFAULT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY moduleassessment_moduleassessmenttype ALTER COLUMN id SET DEFAULT nextval('moduleassessment_moduleassessmenttype_id_seq'::regclass);
+
+
+--
+-- Name: moduleasssementtype id; Type: DEFAULT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY moduleasssementtype ALTER COLUMN id SET DEFAULT nextval('asssementtype_id_seq'::regclass);
+
+
+--
 -- Name: moduledependency id; Type: DEFAULT; Schema: study; Owner: module
 --
 
@@ -2015,6 +2085,14 @@ ALTER TABLE ONLY moduleassessment
 
 
 --
+-- Name: moduleasssementtype asssementtype_pkey; Type: CONSTRAINT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY moduleasssementtype
+    ADD CONSTRAINT asssementtype_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: curriculum curriculum_pk; Type: CONSTRAINT; Schema: study; Owner: module
 --
 
@@ -2116,6 +2194,14 @@ ALTER TABLE ONLY module_profile
 
 ALTER TABLE ONLY moduletopic
     ADD CONSTRAINT module_topics_pk PRIMARY KEY (id);
+
+
+--
+-- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleassessment_id_modul; Type: CONSTRAINT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY moduleassessment_moduleassessmenttype
+    ADD CONSTRAINT moduleassessment_moduleassessmenttype_moduleassessment_id_modul PRIMARY KEY (moduleassessment_id, moduleassessmenttype_id);
 
 
 --
@@ -2668,7 +2754,7 @@ ALTER TABLE ONLY employee_department
 --
 
 ALTER TABLE ONLY learninggoal_qualification
-    ADD CONSTRAINT learning_goal_id_fk FOREIGN KEY (learninggoal_id) REFERENCES learninggoal(id) ON UPDATE CASCADE ON DELETE CASCADE;
+    ADD CONSTRAINT learning_goal_id_fk FOREIGN KEY (learninggoal_id) REFERENCES learninggoal(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
 --
@@ -2728,6 +2814,22 @@ ALTER TABLE ONLY moduletopic
 
 
 --
+-- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleassessment_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY moduleassessment_moduleassessmenttype
+    ADD CONSTRAINT moduleassessment_moduleassessmenttype_moduleassessment_id_fk FOREIGN KEY (moduleassessment_id) REFERENCES moduleassessment(id) ON UPDATE CASCADE;
+
+
+--
+-- Name: moduleassessment_moduleassessmenttype moduleassessment_moduleassessmenttype_moduleasssementtype_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
+--
+
+ALTER TABLE ONLY moduleassessment_moduleassessmenttype
+    ADD CONSTRAINT moduleassessment_moduleassessmenttype_moduleasssementtype_id_fk FOREIGN KEY (moduleassessmenttype_id) REFERENCES moduleasssementtype(id) ON UPDATE CASCADE;
+
+
+--
 -- Name: moduledescription moduledescription_module_id_fk; Type: FK CONSTRAINT; Schema: study; Owner: module
 --
 
@@ -2772,7 +2874,7 @@ ALTER TABLE ONLY profile_qualification
 --
 
 ALTER TABLE ONLY learninggoal_qualification
-    ADD CONSTRAINT qualification_id_fk FOREIGN KEY (qualification_id) REFERENCES qualification(id) ON UPDATE CASCADE;
+    ADD CONSTRAINT qualification_id_fk FOREIGN KEY (qualification_id) REFERENCES qualification(id) ON UPDATE RESTRICT ON DELETE RESTRICT;
 
 
 --
