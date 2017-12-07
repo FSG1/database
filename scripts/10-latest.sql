@@ -105,10 +105,8 @@ CREATE TYPE teachingmaterials AS ENUM (
 
 ALTER TYPE teachingmaterials OWNER TO module;
 
-SET search_path = public, pg_catalog;
-
 --
--- Name: learninggoal_calculate_sequenceno(); Type: FUNCTION; Schema: public; Owner: module
+-- Name: learninggoal_calculate_sequenceno(); Type: FUNCTION; Schema: study; Owner: module
 --
 
 CREATE FUNCTION learninggoal_calculate_sequenceno() RETURNS trigger
@@ -134,9 +132,7 @@ END;
 $$;
 
 
-ALTER FUNCTION public.learninggoal_calculate_sequenceno() OWNER TO module;
-
-SET search_path = study, pg_catalog;
+ALTER FUNCTION study.learninggoal_calculate_sequenceno() OWNER TO module;
 
 --
 -- Name: moduletopic_calculate_sequenceno(); Type: FUNCTION; Schema: study; Owner: module
@@ -2520,7 +2516,7 @@ CREATE TRIGGER calculate_sequenceno BEFORE INSERT OR UPDATE OF sequenceno ON mod
 -- Name: learninggoal calculate_sequenceno; Type: TRIGGER; Schema: study; Owner: module
 --
 
-CREATE TRIGGER calculate_sequenceno BEFORE INSERT OR UPDATE ON learninggoal FOR EACH ROW EXECUTE PROCEDURE public.learninggoal_calculate_sequenceno();
+CREATE TRIGGER calculate_sequenceno BEFORE INSERT OR UPDATE ON learninggoal FOR EACH ROW EXECUTE PROCEDURE learninggoal_calculate_sequenceno();
 
 
 SET search_path = descriptions, pg_catalog;
