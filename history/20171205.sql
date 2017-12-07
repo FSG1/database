@@ -105,39 +105,6 @@ CREATE TYPE teachingmaterials AS ENUM (
 
 ALTER TYPE teachingmaterials OWNER TO module;
 
-SET search_path = public, pg_catalog;
-
---
--- Name: learninggoal_calculate_sequenceno(); Type: FUNCTION; Schema: public; Owner: module
---
-
-CREATE FUNCTION learninggoal_calculate_sequenceno() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-DECLARE
-    r RECORD;
-BEGIN
-    -- check if sequence number does exists
-    if NEW.sequenceno is null THEN
-        select coalesce(max(sequenceno), 0) as seq into r from study.learninggoal where module_id = NEW.module_id;
-
-        if found and r.seq is not null THEN
-            NEW.sequenceno := r.seq + 1;
-        ELSE
-            NEW.sequenceno := 1;
-        END IF;
-
-    END IF;
-
-    return NEW;
-END;
-$$;
-
-
-ALTER FUNCTION public.learninggoal_calculate_sequenceno() OWNER TO module;
-
-SET search_path = study, pg_catalog;
-
 --
 -- Name: moduletopic_calculate_sequenceno(); Type: FUNCTION; Schema: study; Owner: module
 --
@@ -745,7 +712,7 @@ CREATE TABLE learninggoal (
     id integer NOT NULL,
     module_id integer NOT NULL,
     description text,
-    sequenceno smallint,
+    sequenceno smallint DEFAULT 1 NOT NULL,
     weight numeric(3,2) DEFAULT NULL::numeric,
     groupgoal boolean DEFAULT false NOT NULL,
     CONSTRAINT learninggoal_sequence_checl CHECK ((sequenceno > 0)),
@@ -2514,13 +2481,6 @@ SET search_path = study, pg_catalog;
 --
 
 CREATE TRIGGER calculate_sequenceno BEFORE INSERT OR UPDATE OF sequenceno ON moduletopic FOR EACH ROW EXECUTE PROCEDURE moduletopic_calculate_sequenceno();
-
-
---
--- Name: learninggoal calculate_sequenceno; Type: TRIGGER; Schema: study; Owner: module
---
-
-CREATE TRIGGER calculate_sequenceno BEFORE INSERT OR UPDATE ON learninggoal FOR EACH ROW EXECUTE PROCEDURE public.learninggoal_calculate_sequenceno();
 
 
 SET search_path = descriptions, pg_catalog;
