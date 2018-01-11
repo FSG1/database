@@ -8,4 +8,4 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 ALTER DATABASE modulemanagement OWNER TO module;
-DROP SCHEMA IF EXISTS users CASCADE;
+DROP SCHEMA IF EXISTS study CASCADE;
